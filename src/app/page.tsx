@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useTransition, useRef, useEffect } from 'react';
@@ -302,7 +303,7 @@ export default function Home() {
         </Button>
       </div>
       <footer className="py-6 text-center text-muted-foreground text-sm">
-        Created by <a href="#" className="underline hover:text-foreground">arookiecoder</a>
+        Created by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
       </footer>
     </div>
   );
