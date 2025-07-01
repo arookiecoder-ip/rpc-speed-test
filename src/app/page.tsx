@@ -523,7 +523,7 @@ export default function Home() {
                     <div className="grid gap-4 py-4">
                         <Textarea 
                             id="feedback"
-                            placeholder="Your feedback..."
+                            placeholder="Enter feedback (minimum 10 characters)"
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             className="col-span-3"
