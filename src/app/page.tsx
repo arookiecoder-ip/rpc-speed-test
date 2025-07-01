@@ -42,7 +42,7 @@ const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: 
 );
 
 export default function Home() {
-  const [rpcUrl, setRpcUrl] = useState('https://your-rpc-endpoint.com');
+  const [rpcUrl, setRpcUrl] = useState('');
   const [isDetecting, setIsDetecting] = useState(false);
   const [isBenchmarking, setIsBenchmarking] = useState(false);
 
