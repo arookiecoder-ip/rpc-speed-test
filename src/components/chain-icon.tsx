@@ -1,5 +1,5 @@
 import { EvmIcon, SolanaIcon, CosmosIcon, AptosIcon, SuiIcon, InjectiveIcon } from '@/components/icons';
-import { HelpCircle, Layers, TowerControl, Repeat } from 'lucide-react';
+import { HelpCircle, Layers, TowerControl, Repeat, Share2, Component, Bitcoin, Hexagon, Fish, Circle } from 'lucide-react';
 import type { SVGProps } from 'react';
 
 interface ChainIconProps extends SVGProps<SVGSVGElement> {
@@ -26,6 +26,18 @@ export const ChainIcon = ({ chain, ...props }: ChainIconProps) => {
       return <Layers {...props} />;
     case 'beacon':
         return <TowerControl {...props} />;
+    case 'starknet':
+        return <Share2 {...props} />;
+    case 'stacks':
+        return <Component {...props} />;
+    case 'utxo':
+        return <Bitcoin {...props} />;
+    case 'kaspa':
+        return <Hexagon {...props} />;
+    case 'ironfish':
+        return <Fish {...props} />;
+    case 'near':
+        return <Circle {...props} />;
     default:
       return <HelpCircle {...props} />;
   }

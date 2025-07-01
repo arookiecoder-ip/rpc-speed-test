@@ -1,23 +1,42 @@
 
+
 const CHAIN_KEYWORDS: Record<string, string[]> = {
     evm: [
-        "eth", "ethereum", "bsc", "polygon", "matic", "avalanche", "avax", 
+        "eth", "ethereum", "bsc", "binance", "bnb", "polygon", "matic", "avalanche", "avax", 
         "arbitrum", "optimism", "fantom", "base", "gnosis", "xdai", "celo", 
         "moonbeam", "moonriver", "cronos", "boba", "metis", "aurora", "zksync", 
-        "scroll", "linea", "mantle", "blast", "mode", "sonic"
+        "scroll", "linea", "mantle", "blast", "mode", "sonic", "harmony", "fuse",
+        "filecoin", "kava", "ronin", "core", "conflux", "oasis", "palm", "telos",
+        "evmos", "meter", "tomochain", "klaytn", "bittorrent", "dogechain", "thundercore",
+        "callisto", "rei", "gochain", "horizen", "eon", "chiliz", "shiden", "shibuya",
+        "astar", "platon", "bittensor", "manta", "x1", "holesky", "fraxtal", "zora",
+        "taiko", "canto", "berachain", "degen", "morph", "lightlink", "cyber", "mitosis",
+        "zklink", "aevo", "shardeum", "neon", "rootstock", "rsk", "bitlayer", "merlin",
+        "bouncebit", "bitgert", "velas", "velocore", "coredao", "aleph"
+    ],
+    cosmos: [
+        "cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", 
+        "secret", "scrt", "mantra", "kava", "akash", "axelar", "stargaze", "agoric",
+        "stride", "sei", "neutron", "celestia", "nomic", "archway", "persistence",
+        "sommelier", "kujira", "evmos", "canto", "comdex", "chihuahua", "crescent",
+        "desmos", "irisnet", "regen", "sentinel", "sifchain", "umee", "onomy", "kichain",
+        "bitsong", "assetmantle", "decentr", "likecoin", "cybermiles", "certik", "iov",
+        "fetch.ai", "andromeda", "quicksilver", "provenance", "dymension", "lava", "analog",
+        "xpla", "oraichain"
     ],
     aptos: ["apt", "aptos"],
     sui: ["sui"],
     solana: ["sol", "solana"],
     injective: ["inj", "injective"],
-    cosmos: [
-        "cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", 
-        "secret", "scrt", "mantra", "kava", "akash", "axelar", "stargaze", 
-        "agoric", "stride"
-    ],
     dydx: ["dydx"],
-    substrate: ["polkadot", "kusama", "substrate"],
+    substrate: ["polkadot", "dot", "kusama", "ksm", "substrate", "aleph zero"],
     beacon: ["beacon", "consensus"],
+    starknet: ["starknet", "stark"],
+    stacks: ["stacks", "stx"],
+    utxo: ["bitcoin", "btc", "litecoin", "ltc", "dogecoin", "doge", "dash"],
+    kaspa: ["kaspa", "ksp"],
+    ironfish: ["ironfish", "iron"],
+    near: ["near"],
 };
 
 export const CHAIN_NAMES: Record<string, string> = {
@@ -30,6 +49,12 @@ export const CHAIN_NAMES: Record<string, string> = {
     dydx: "dYdX",
     substrate: "Substrate",
     beacon: "Beacon",
+    starknet: "StarkNet",
+    stacks: "Stacks",
+    utxo: "Bitcoin-like (UTXO)",
+    kaspa: "Kaspa",
+    ironfish: "Iron Fish",
+    near: "Near",
     unknown: "Unknown",
 };
 
@@ -41,6 +66,7 @@ export async function detectChain(rpcUrl: string): Promise<string> {
     if (lowered.includes("injective") || lowered.includes("inj")) return 'injective';
     if (lowered.includes("beacon")) return 'beacon';
     if (lowered.includes("dydx")) return 'dydx';
+    if (lowered.includes("starknet") || lowered.includes("stark")) return 'starknet';
     
     for (const chain in CHAIN_KEYWORDS) {
         if (CHAIN_KEYWORDS[chain].some(word => lowered.includes(word))) {
@@ -52,10 +78,16 @@ export async function detectChain(rpcUrl: string): Promise<string> {
     const probeOrder = [
         { chainId: 'evm', checkFunc: checkEvm },
         { chainId: 'solana', checkFunc: checkSolana },
+        { chainId: 'cosmos', checkFunc: checkCosmos },
         { chainId: 'sui', checkFunc: checkSui },
         { chainId: 'aptos', checkFunc: checkAptos },
-        { chainId: 'cosmos', checkFunc: checkCosmos },
         { chainId: 'substrate', checkFunc: checkSubstrate },
+        { chainId: 'starknet', checkFunc: checkStarknet },
+        { chainId: 'utxo', checkFunc: checkUtxo },
+        { chainId: 'near', checkFunc: checkNear },
+        { chainId: 'stacks', checkFunc: checkStacks },
+        { chainId: 'kaspa', checkFunc: checkKaspa },
+        { chainId: 'ironfish', checkFunc: checkIronfish },
         { chainId: 'beacon', checkFunc: checkBeacon },
     ];
 
@@ -151,6 +183,67 @@ async function checkBeacon(rpc: string): Promise<number> {
     return parseInt(data.data.finalized.epoch);
 }
 
+async function checkStarknet(rpc: string): Promise<number> {
+    const payload = { jsonrpc: "2.0", method: "starknet_blockNumber", params: [], id: 1 };
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`Starknet check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(`Starknet check failed: ${data.error.message}`);
+    if (typeof data.result !== 'number') throw new Error('Invalid response from Starknet RPC');
+    return data.result;
+}
+
+async function checkStacks(rpc: string): Promise<number> {
+    const res = await fetch(`${rpc.replace(/\/$/, '')}/v2/info`, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`Stacks check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (typeof data.stacks_tip_height !== 'number') throw new Error('Invalid response from Stacks RPC');
+    return data.stacks_tip_height;
+}
+
+async function checkUtxo(rpc: string): Promise<number> {
+    const payload = { jsonrpc: "1.0", method: "getblockcount", params: [], id: "chaindoctor" };
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'text/plain;' }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`UTXO check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(`UTXO check failed: ${data.error.message}`);
+    if (typeof data.result !== 'number') throw new Error('Invalid response from UTXO RPC');
+    return data.result;
+}
+
+async function checkKaspa(rpc: string): Promise<number> {
+    const payload = { method: "getBlockDagInfoRequest", params: {}, id: 1 };
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`Kaspa check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (data?.getBlockDagInfoResponse?.error) throw new Error(`Kaspa check failed: ${data.getBlockDagInfoResponse.error.message}`);
+    const blockCount = data?.getBlockDagInfoResponse?.blockCount;
+    if (!blockCount) throw new Error('Invalid response from Kaspa RPC');
+    return parseInt(blockCount, 10);
+}
+
+async function checkIronfish(rpc: string): Promise<number> {
+    const payload = { jsonrpc: "2.0", method: "chain_head", params: [], id: 1 };
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`Iron Fish check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(`Iron Fish check failed: ${data.error.message}`);
+    const sequence = data?.result?.sequence;
+    if (typeof sequence !== 'number') throw new Error('Invalid response from Iron Fish RPC');
+    return sequence;
+}
+
+async function checkNear(rpc: string): Promise<number> {
+    const payload = { jsonrpc: "2.0", method: "block", params: { finality: "final" }, id: "dontcare" };
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
+    if (!res.ok) throw new Error(`Near check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (data.error) throw new Error(`Near check failed: ${data.error.message}`);
+    const height = data?.result?.header?.height;
+    if (typeof height !== 'number') throw new Error('Invalid response from Near RPC');
+    return height;
+}
+
 export const CHAIN_CHECK_FUNCTIONS: Record<string, (rpc: string) => Promise<number>> = {
     evm: checkEvm,
     solana: checkSolana,
@@ -161,6 +254,12 @@ export const CHAIN_CHECK_FUNCTIONS: Record<string, (rpc: string) => Promise<numb
     dydx: checkCosmos,
     substrate: checkSubstrate,
     beacon: checkBeacon,
+    starknet: checkStarknet,
+    stacks: checkStacks,
+    utxo: checkUtxo,
+    kaspa: checkKaspa,
+    ironfish: checkIronfish,
+    near: checkNear,
 };
 
 // --- Measurement Functions ---
