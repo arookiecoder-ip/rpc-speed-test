@@ -92,3 +92,10 @@ export const InjectiveIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M17.433 11.233V12.7H13.59v4.201h-3.18V12.7H6.568v-1.467h3.843V7.032h3.18v4.201h3.842zM12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 21.6c-5.302 0-9.6-4.298-9.6-9.6s4.298-9.6 9.6-9.6 9.6 4.298 9.6 9.6-4.298 9.6-9.6 9.6z"/>
   </svg>
 );
+
+export const TronIcon = (props: SVGProps<SVGSVGElement>) => (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+        <path d="M12.242 18.2L18.2 12.242L15.171 9.213L12.242 12.142L9.213 9.213L6.284 12.142L12.242 18.2Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M12.242 5.8L15.171 8.729L12.242 11.658L9.313 8.729L12.242 5.8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);

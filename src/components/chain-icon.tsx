@@ -1,4 +1,4 @@
-import { EvmIcon, SolanaIcon, CosmosIcon, AptosIcon, SuiIcon, InjectiveIcon } from '@/components/icons';
+import { EvmIcon, SolanaIcon, CosmosIcon, AptosIcon, SuiIcon, InjectiveIcon, TronIcon } from '@/components/icons';
 import { HelpCircle, Layers, TowerControl, Repeat, Share2, Component, Bitcoin, Hexagon, Fish, Circle } from 'lucide-react';
 import type { SVGProps } from 'react';
 
@@ -20,6 +20,8 @@ export const ChainIcon = ({ chain, ...props }: ChainIconProps) => {
       return <SuiIcon {...props} />;
     case 'injective':
       return <InjectiveIcon {...props} />;
+    case 'tron':
+      return <TronIcon {...props} />;
     case 'dydx':
       return <Repeat {...props} />;
     case 'substrate':

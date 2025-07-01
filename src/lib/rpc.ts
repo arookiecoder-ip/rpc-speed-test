@@ -1,5 +1,6 @@
 
 
+
 const CHAIN_KEYWORDS: Record<string, string[]> = {
     evm: [
         "eth", "ethereum", "bsc", "binance", "bnb", "polygon", "matic", "avalanche", "avax", 
@@ -9,10 +10,10 @@ const CHAIN_KEYWORDS: Record<string, string[]> = {
         "filecoin", "kava", "ronin", "core", "conflux", "oasis", "palm", "telos",
         "evmos", "meter", "tomochain", "klaytn", "bittorrent", "dogechain", "thundercore",
         "callisto", "rei", "gochain", "horizen", "eon", "chiliz", "shiden", "shibuya",
-        "astar", "platon", "bittensor", "manta", "x1", "holesky", "fraxtal", "zora",
+        "astar", "platon", "bittensor", "x1", "holesky", "fraxtal", "zora",
         "taiko", "canto", "berachain", "degen", "morph", "lightlink", "cyber", "mitosis",
         "zklink", "aevo", "shardeum", "neon", "rootstock", "rsk", "bitlayer", "merlin",
-        "bouncebit", "bitgert", "velas", "velocore", "coredao", "aleph"
+        "bouncebit", "bitgert", "velas", "velocore", "coredao", "aleph", "unichain"
     ],
     cosmos: [
         "cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", 
@@ -29,7 +30,7 @@ const CHAIN_KEYWORDS: Record<string, string[]> = {
     solana: ["sol", "solana"],
     injective: ["inj", "injective"],
     dydx: ["dydx"],
-    substrate: ["polkadot", "dot", "kusama", "ksm", "substrate", "aleph zero"],
+    substrate: ["polkadot", "dot", "kusama", "ksm", "substrate", "aleph zero", "manta"],
     beacon: ["beacon", "consensus"],
     starknet: ["starknet", "stark"],
     stacks: ["stacks", "stx"],
@@ -37,6 +38,7 @@ const CHAIN_KEYWORDS: Record<string, string[]> = {
     kaspa: ["kaspa", "ksp"],
     ironfish: ["ironfish", "iron"],
     near: ["near"],
+    tron: ["tron", "trx"],
 };
 
 export const CHAIN_NAMES: Record<string, string> = {
@@ -55,6 +57,7 @@ export const CHAIN_NAMES: Record<string, string> = {
     kaspa: "Kaspa",
     ironfish: "Iron Fish",
     near: "Near",
+    tron: "TRON",
     unknown: "Unknown",
 };
 
@@ -63,6 +66,7 @@ export async function detectChain(rpcUrl: string): Promise<string> {
     
     // 1. Keyword matching for speed and for specific chains
     // Prioritize specific chains that might also match general keywords
+    if (lowered.includes("tron") || lowered.includes("trx")) return 'tron';
     if (lowered.includes("injective") || lowered.includes("inj")) return 'injective';
     if (lowered.includes("beacon")) return 'beacon';
     if (lowered.includes("dydx")) return 'dydx';
@@ -77,6 +81,7 @@ export async function detectChain(rpcUrl: string): Promise<string> {
     // 2. If no keyword match, start probing endpoints. This will catch generic EVM urls.
     const probeOrder = [
         { chainId: 'evm', checkFunc: checkEvm },
+        { chainId: 'tron', checkFunc: checkTron },
         { chainId: 'solana', checkFunc: checkSolana },
         { chainId: 'cosmos', checkFunc: checkCosmos },
         { chainId: 'sui', checkFunc: checkSui },
@@ -113,6 +118,20 @@ async function checkEvm(rpc: string): Promise<number> {
     const data = await res.json();
     if (data.error) throw new Error(`EVM check failed: ${data.error.message}`);
     return parseInt(data.result, 16);
+}
+
+async function checkTron(rpc: string): Promise<number> {
+    const res = await fetch(`${rpc.replace(/\/$/, '')}/wallet/getnowblock`, { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000) 
+    });
+    if (!res.ok) throw new Error(`TRON check failed: Server responded with status ${res.status}`);
+    const data = await res.json();
+    if (!data.block_header?.raw_data?.number) {
+        throw new Error('Invalid response from TRON RPC');
+    }
+    return data.block_header.raw_data.number;
 }
 
 async function checkSolana(rpc: string): Promise<number> {
@@ -260,6 +279,7 @@ export const CHAIN_CHECK_FUNCTIONS: Record<string, (rpc: string) => Promise<numb
     kaspa: checkKaspa,
     ironfish: checkIronfish,
     near: checkNear,
+    tron: checkTron,
 };
 
 // --- Measurement Functions ---
@@ -278,7 +298,7 @@ export async function measureCups(checkFunc: (rpc: string) => Promise<number>, r
 
 export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const numRequests = 10;
+        const numRequests = 20;
         let successCount = 0;
         const start = performance.now();
         for (let i = 0; i < numRequests; i++) {
@@ -298,7 +318,7 @@ export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<nu
 
 export async function measureBurstRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const batchSize = 50;
+        const batchSize = 20;
         const start = performance.now();
         const burstPromises = Array(batchSize).fill(null).map(() => checkFunc(rpc));
         
