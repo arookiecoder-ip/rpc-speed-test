@@ -8,7 +8,6 @@ import {
   ArrowRightLeft,
   Zap,
   Loader2,
-  SlidersHorizontal,
   ServerCrash,
   Square,
   History,
@@ -45,14 +44,6 @@ import { CHAIN_NAMES } from '@/lib/rpc';
 import { ChainIcon } from '@/components/chain-icon';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ChainSelector } from '@/components/chain-selector';
-import { 
-    Sheet, 
-    SheetContent, 
-    SheetDescription, 
-    SheetHeader, 
-    SheetTitle, 
-    SheetTrigger 
-} from '@/components/ui/sheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 
@@ -155,7 +146,6 @@ export default function Home() {
     setRpcUrl(e.target.value);
     setDetectedChainId(null);
     setDetectedChainName(null);
-    setSelectedChainId('auto');
   };
 
   const stopPolling = () => {
@@ -351,7 +341,7 @@ export default function Home() {
         <Card className="w-full max-w-3xl p-6 sm:p-8 bg-transparent border-border/60">
           <CardHeader className="text-center p-0 mb-6">
             <CardTitle className="font-headline text-2xl">Configuration</CardTitle>
-            <CardDescription>Enter your RPC URL and select a chain to begin.</CardDescription>
+            <CardDescription>Enter your RPC URL and select parameters to begin.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="flex flex-col gap-4">
@@ -381,6 +371,26 @@ export default function Home() {
                     <DetectedChain chainId={detectedChainId} chainName={detectedChainName} />
                   ) : null}
                 </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-2 pb-4">
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="latestBlock" checked={benchmarkParams.latestBlock} onCheckedChange={(checked) => handleParamChange('latestBlock', checked)} />
+                        <Label htmlFor="latestBlock" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Live Block Number</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="cups" checked={benchmarkParams.cups} onCheckedChange={(checked) => handleParamChange('cups', checked)} />
+                        <Label htmlFor="cups" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Chain Usage Per Second (CUPS)</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="effectiveRps" checked={benchmarkParams.effectiveRps} onCheckedChange={(checked) => handleParamChange('effectiveRps', checked)} />
+                        <Label htmlFor="effectiveRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Effective RPS (Sequential)</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="burstRps" checked={benchmarkParams.burstRps} onCheckedChange={(checked) => handleParamChange('burstRps', checked)} />
+                        <Label htmlFor="burstRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Burst RPS (Parallel)</Label>
+                    </div>
+                </div>
+                
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
                 disabled={isBenchmarking ? false : (!rpcUrl || noParamsSelected)}
@@ -454,42 +464,6 @@ export default function Home() {
         )}
       </main>
 
-       <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center">
-        <Sheet>
-            <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground bg-card/80 border-border/60 border rounded-full">
-                  <SlidersHorizontal className="h-5 w-5" />
-                  <span className="sr-only">Settings</span>
-                </Button>
-            </SheetTrigger>
-            <SheetContent>
-                <SheetHeader>
-                    <SheetTitle>Benchmark Settings</SheetTitle>
-                    <SheetDescription>
-                        Select which parameters to run during the benchmark.
-                    </SheetDescription>
-                </SheetHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="latestBlock" checked={benchmarkParams.latestBlock} onCheckedChange={(checked) => handleParamChange('latestBlock', checked)} />
-                        <Label htmlFor="latestBlock" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Live Block Number</Label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="cups" checked={benchmarkParams.cups} onCheckedChange={(checked) => handleParamChange('cups', checked)} />
-                        <Label htmlFor="cups" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Chain Usage Per Second (CUPS)</Label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="effectiveRps" checked={benchmarkParams.effectiveRps} onCheckedChange={(checked) => handleParamChange('effectiveRps', checked)} />
-                        <Label htmlFor="effectiveRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Effective RPS (Sequential)</Label>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="burstRps" checked={benchmarkParams.burstRps} onCheckedChange={(checked) => handleParamChange('burstRps', checked)} />
-                        <Label htmlFor="burstRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Burst RPS (Parallel)</Label>
-                    </div>
-                </div>
-            </SheetContent>
-        </Sheet>
-      </div>
       <footer className="py-6 text-center text-muted-foreground text-sm">
         Created with <span className="text-red-500">❤️</span> by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
       </footer>
