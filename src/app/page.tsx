@@ -23,9 +23,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast"
-import { detectChain, runBenchmark } from '@/app/actions';
+import { 
+    detectChain, 
+    getLatestBlock,
+    getCUPS,
+    getEffectiveRps,
+    getBurstRps
+} from '@/app/actions';
 import { ChainIcon } from '@/components/chain-icon';
-import { Separator } from '@/components/ui/separator';
 
 const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: React.ElementType, title: string, value: string | number, unit: string, isBenchmarking: boolean }) => (
   <Card className="bg-card/80 border-border/60 text-left">
@@ -73,7 +78,7 @@ export default function Home() {
 
   const { toast } = useToast();
   const [isDetecting, startDetectTransition] = useTransition();
-  const [isBenchmarking, startBenchmarkTransition] = useTransition();
+  const [isBenchmarking, setIsBenchmarking] = useState(false);
 
   const [latestBlock, setLatestBlock] = useState<string | number>('-');
   const [cups, setCups] = useState<string | number>('-');
@@ -124,23 +129,49 @@ export default function Home() {
       }
       
       resetMetrics();
+      setIsBenchmarking(true);
 
-      startBenchmarkTransition(async () => {
-          const formData = new FormData();
-          formData.append('rpcUrl', rpcUrl);
-          formData.append('chainId', detectedChainId);
-          const result = await runBenchmark(formData);
+      const formData = new FormData();
+      formData.append('rpcUrl', rpcUrl);
+      formData.append('chainId', detectedChainId);
 
-          if (result?.error) {
-              toast({ title: "Benchmark Failed", description: result.error, variant: "destructive" });
-          } else if (result) {
-              setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
-              setCups(result.cups ?? '-');
-              setEffectiveRps(result.effectiveRps ?? '-');
-              setBurstRps(result.burstRps ?? '-');
-              toast({ title: "Benchmark Complete", description: "Results are in."});
-          }
+      const blockPromise = getLatestBlock(formData).then(result => {
+        if (result?.error) {
+            setLatestBlock('Error');
+            toast({ title: "Connection Failed", description: result.error, variant: "destructive" });
+        } else if (result) {
+            setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
+        }
       });
+      
+      const cupsPromise = getCUPS(formData).then(result => {
+        if (result?.error) {
+            setCups('Error');
+        } else if (result) {
+            setCups(result.cups ?? '-');
+        }
+      });
+
+      const effectiveRpsPromise = getEffectiveRps(formData).then(result => {
+        if (result?.error) {
+            setEffectiveRps('Error');
+        } else if (result) {
+            setEffectiveRps(result.effectiveRps ?? '-');
+        }
+      });
+
+      const burstRpsPromise = getBurstRps(formData).then(result => {
+        if (result?.error) {
+            setBurstRps('Error');
+        } else if (result) {
+            setBurstRps(result.burstRps ?? '-');
+        }
+      });
+
+      await Promise.allSettled([blockPromise, cupsPromise, effectiveRpsPromise, burstRpsPromise]);
+      
+      setIsBenchmarking(false);
+      toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
   };
 
   const isProcessing = isDetecting || isBenchmarking;

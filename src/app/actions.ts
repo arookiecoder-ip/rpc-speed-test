@@ -23,50 +23,75 @@ export async function detectChain(formData: FormData) {
     }
 }
 
-export async function runBenchmark(formData: FormData) {
+// Helper for benchmark actions
+async function setupBenchmark(formData: FormData) {
     const rpcUrl = formData.get('rpcUrl') as string;
     const chainId = formData.get('chainId') as string;
 
-    if (!rpcUrl || !chainId) {
-        return { error: 'RPC URL and chain ID are required.' };
+    if (!rpcUrl) {
+        return { error: 'RPC URL is required.' };
     }
-
+    if (!chainId) {
+        return { error: 'Chain ID is required.' };
+    }
     const checkFunc = CHAIN_CHECK_FUNCTIONS[chainId];
     if (!checkFunc) {
         return { error: `Unsupported chain: ${chainId}` };
     }
+    return { rpcUrl, checkFunc };
+}
+
+export async function getLatestBlock(formData: FormData) {
+    const setup = await setupBenchmark(formData);
+    if ('error' in setup) return setup;
+    const { rpcUrl, checkFunc } = setup;
 
     try {
-        // Run checks in parallel
-        const results = await Promise.allSettled([
-            checkFunc(rpcUrl),
-            measureCups(checkFunc, rpcUrl),
-            measureEffectiveRps(checkFunc, rpcUrl),
-            measureBurstRps(checkFunc, rpcUrl),
-        ]);
-
-        const [latestBlockRes, cupsRes, effectiveRpsRes, burstRpsRes] = results;
-
-        const latestBlock = latestBlockRes.status === 'fulfilled' ? latestBlockRes.value : '-';
-        const cups = cupsRes.status === 'fulfilled' && cupsRes.value !== null ? cupsRes.value.toFixed(2) : '-';
-        const effectiveRps = effectiveRpsRes.status === 'fulfilled' && effectiveRpsRes.value !== null ? Math.round(effectiveRpsRes.value) : '-';
-        const burstRps = burstRpsRes.status === 'fulfilled' && burstRpsRes.value !== null ? Math.round(burstRpsRes.value) : '-';
-        
-        if (latestBlockRes.status === 'rejected') {
-            console.error("Benchmark Error:", latestBlockRes.reason);
-            const errorMessage = latestBlockRes.reason instanceof Error ? latestBlockRes.reason.message : 'The RPC endpoint is unreachable or invalid.';
-            return { error: errorMessage };
-        }
-        
-        return {
-            latestBlock,
-            cups,
-            effectiveRps,
-            burstRps,
-        };
-
+        const latestBlock = await checkFunc(rpcUrl);
+        return { latestBlock };
     } catch (e: any) {
-        console.error("Benchmark Error:", e);
-        return { error: e.message || 'An unknown error occurred during benchmark.' };
+        return { error: e.message || 'The RPC endpoint is unreachable or invalid.' };
+    }
+}
+
+export async function getCUPS(formData: FormData) {
+    const setup = await setupBenchmark(formData);
+    if ('error' in setup) return setup;
+    const { rpcUrl, checkFunc } = setup;
+
+    try {
+        const cupsValue = await measureCups(checkFunc, rpcUrl);
+        const cups = cupsValue !== null ? cupsValue.toFixed(2) : '-';
+        return { cups };
+    } catch (e: any) {
+        return { error: e.message || 'Failed to measure CUPS.' };
+    }
+}
+
+export async function getEffectiveRps(formData: FormData) {
+    const setup = await setupBenchmark(formData);
+    if ('error' in setup) return setup;
+    const { rpcUrl, checkFunc } = setup;
+
+    try {
+        const rpsValue = await measureEffectiveRps(checkFunc, rpcUrl);
+        const effectiveRps = rpsValue !== null ? Math.round(rpsValue) : '-';
+        return { effectiveRps };
+    } catch (e: any) {
+        return { error: e.message || 'Failed to measure Effective RPS.' };
+    }
+}
+
+export async function getBurstRps(formData: FormData) {
+    const setup = await setupBenchmark(formData);
+    if ('error' in setup) return setup;
+    const { rpcUrl, checkFunc } = setup;
+
+    try {
+        const rpsValue = await measureBurstRps(checkFunc, rpcUrl);
+        const burstRps = rpsValue !== null ? Math.round(rpsValue) : '-';
+        return { burstRps };
+    } catch (e: any) {
+        return { error: e.message || 'Failed to measure Burst RPS.' };
     }
 }
