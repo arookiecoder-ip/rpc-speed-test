@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from 'react';
+import React, { useState, useTransition, useRef, useEffect } from 'react';
 import {
   Box,
   RefreshCw,
@@ -84,8 +84,20 @@ export default function Home() {
   const [cups, setCups] = useState<string | number>('-');
   const [effectiveRps, setEffectiveRps] = useState<string | number>('-');
   const [burstRps, setBurstRps] = useState<string | number>('-');
+  
+  const [isPollingBlock, setIsPollingBlock] = useState(false);
+  const blockUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+
+  const stopPolling = () => {
+    if (blockUpdateInterval.current) {
+      clearInterval(blockUpdateInterval.current);
+      blockUpdateInterval.current = null;
+    }
+    setIsPollingBlock(false);
+  };
 
   const resetMetrics = () => {
+      stopPolling();
       setLatestBlock('-');
       setCups('-');
       setEffectiveRps('-');
@@ -142,6 +154,7 @@ export default function Home() {
         } else if (result) {
             setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
         }
+        return result;
       });
       
       const cupsPromise = getCUPS(formData).then(result => {
@@ -168,11 +181,46 @@ export default function Home() {
         }
       });
 
-      await Promise.allSettled([blockPromise, cupsPromise, effectiveRpsPromise, burstRpsPromise]);
+      const [blockResult] = await Promise.allSettled([blockPromise, cupsPromise, effectiveRpsPromise, burstRpsPromise]);
       
       setIsBenchmarking(false);
       toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
+
+      if (blockResult.status === 'fulfilled' && !blockResult.value?.error) {
+          setIsPollingBlock(true);
+      }
   };
+
+  useEffect(() => {
+    if (!isPollingBlock) {
+      return;
+    }
+
+    const fetchAndUpdateBlock = async () => {
+      if (!rpcUrl || !detectedChainId) return;
+
+      const formData = new FormData();
+      formData.append('rpcUrl', rpcUrl);
+      formData.append('chainId', detectedChainId);
+      const result = await getLatestBlock(formData);
+
+      if (result?.error) {
+        setLatestBlock('Error');
+        toast({ title: "Connection Lost", description: "Stopping real-time block updates.", variant: "destructive" });
+        stopPolling();
+      } else if (result) {
+        setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
+      }
+    };
+
+    blockUpdateInterval.current = setInterval(fetchAndUpdateBlock, 3000);
+
+    return () => {
+      if (blockUpdateInterval.current) {
+        clearInterval(blockUpdateInterval.current);
+      }
+    };
+  }, [isPollingBlock, rpcUrl, detectedChainId]);
 
   const isProcessing = isDetecting || isBenchmarking;
 
