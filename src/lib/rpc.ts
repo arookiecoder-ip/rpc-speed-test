@@ -40,7 +40,7 @@ export function detectChain(rpcUrl: string): string {
 
 async function checkEvm(rpc: string): Promise<number> {
     const payload = { jsonrpc: "2.0", method: "eth_blockNumber", params: [], id: 1 };
-    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000) });
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`EVM check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(`EVM check failed: ${data.error.message}`);
@@ -49,7 +49,7 @@ async function checkEvm(rpc: string): Promise<number> {
 
 async function checkSolana(rpc: string): Promise<number> {
     const payload = { jsonrpc: "2.0", method: "getSlot", params: [], id: 1 };
-    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000) });
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`Solana check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(`Solana check failed: ${data.error.message}`);
@@ -58,7 +58,7 @@ async function checkSolana(rpc: string): Promise<number> {
 
 async function checkSui(rpc: string): Promise<number> {
     const payload = { jsonrpc: "2.0", method: "sui_getLatestCheckpointSequenceNumber", params: [], id: 1 };
-    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000) });
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`Sui check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(`Sui check failed: ${data.error.message}`);
@@ -66,7 +66,7 @@ async function checkSui(rpc: string): Promise<number> {
 }
 
 async function checkAptos(rpc: string): Promise<number> {
-    const res = await fetch(`${rpc.replace(/\/$/, '')}/v1`, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(`${rpc.replace(/\/$/, '')}/v1`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`Aptos check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     return parseInt(data.ledger_version);
@@ -82,7 +82,7 @@ async function checkCosmos(rpc: string): Promise<number> {
 
     for (const url of endpoints) {
         try {
-            const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
             if (res.ok) {
                 const data = await res.json();
                 if (url.endsWith('/blocks/latest')) {
@@ -101,7 +101,7 @@ async function checkCosmos(rpc: string): Promise<number> {
 
 async function checkSubstrate(rpc: string): Promise<number> {
     const payload = { jsonrpc: "2.0", method: "chain_getHeader", params: [], id: 1 };
-    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(10000) });
+    const res = await fetch(rpc, { method: 'POST', body: JSON.stringify(payload), headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`Substrate check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     if (data.error) throw new Error(`Substrate check failed: ${data.error.message}`);
@@ -109,7 +109,7 @@ async function checkSubstrate(rpc: string): Promise<number> {
 }
 
 async function checkBeacon(rpc: string): Promise<number> {
-    const res = await fetch(`${rpc.replace(/\/$/, '')}/eth/v1/beacon/states/head/finality_checkpoints`, { signal: AbortSignal.timeout(10000) });
+    const res = await fetch(`${rpc.replace(/\/$/, '')}/eth/v1/beacon/states/head/finality_checkpoints`, { signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`Beacon check failed: Server responded with status ${res.status}`);
     const data = await res.json();
     return parseInt(data.data.finalized.epoch);
@@ -131,9 +131,9 @@ export const CHAIN_CHECK_FUNCTIONS: Record<string, (rpc: string) => Promise<numb
 export async function measureCups(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
         const val1 = await checkFunc(rpc);
-        await new Promise(resolve => setTimeout(resolve, 10000));
+        await new Promise(resolve => setTimeout(resolve, 5000));
         const val2 = await checkFunc(rpc);
-        return (val2 - val1) / 10;
+        return (val2 - val1) / 5;
     } catch (e) {
         console.error("CUPS measurement failed:", e);
         return null;
@@ -142,7 +142,7 @@ export async function measureCups(checkFunc: (rpc: string) => Promise<number>, r
 
 export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const numRequests = 5;
+        const numRequests = 10;
         let successCount = 0;
         const start = performance.now();
         for (let i = 0; i < numRequests; i++) {
@@ -162,7 +162,7 @@ export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<nu
 
 export async function measureBurstRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const batchSize = 20;
+        const batchSize = 50;
         const start = performance.now();
         const burstPromises = Array(batchSize).fill(null).map(() => checkFunc(rpc));
         
