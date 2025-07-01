@@ -141,22 +141,27 @@ export default function Home() {
       }
       
       resetMetrics();
-      setIsBenchmarking(true);
+      setIsBenchmarking(true); // This will show loaders on cards that are reset
 
       const formData = new FormData();
       formData.append('rpcUrl', rpcUrl);
       formData.append('chainId', detectedChainId);
 
-      const blockPromise = getLatestBlock(formData).then(result => {
+      // --- Block Number Logic ---
+      // Fetch initial block and start polling immediately on success.
+      // This is not awaited, so other benchmarks can start.
+      getLatestBlock(formData).then(result => {
         if (result?.error) {
             setLatestBlock('Error');
             toast({ title: "Connection Failed", description: result.error, variant: "destructive" });
         } else if (result) {
             setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
+            setIsPollingBlock(true); // Start real-time updates!
         }
-        return result;
       });
       
+      // --- Other Benchmark Logic ---
+      // These run in parallel and update their own state.
       const cupsPromise = getCUPS(formData).then(result => {
         if (result?.error) {
             setCups('Error');
@@ -181,14 +186,12 @@ export default function Home() {
         }
       });
 
-      const [blockResult] = await Promise.allSettled([blockPromise, cupsPromise, effectiveRpsPromise, burstRpsPromise]);
+      // --- Finalization Logic ---
+      // Wait for the long-running benchmarks to complete, then turn off spinners and show toast.
+      await Promise.allSettled([cupsPromise, effectiveRpsPromise, burstRpsPromise]);
       
       setIsBenchmarking(false);
       toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
-
-      if (blockResult.status === 'fulfilled' && !blockResult.value?.error) {
-          setIsPollingBlock(true);
-      }
   };
 
   useEffect(() => {
