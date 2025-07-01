@@ -361,18 +361,19 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
-      <header className="absolute top-0 left-0 right-0 p-4 flex justify-end">
-        <ThemeToggle />
-      </header>
-
       <main className="flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center text-center gap-12">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-6xl font-bold font-headline" style={{ color: 'hsl(var(--primary))' }}>
-            ChainDoctor
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-md">
-            Benchmark your blockchain RPC endpoint for speed and reliability.
-          </p>
+        <div className="relative w-full">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-5xl sm:text-6xl font-bold font-headline" style={{ color: 'hsl(var(--primary))' }}>
+              ChainDoctor
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-md mx-auto">
+              Benchmark your blockchain RPC endpoint for speed and reliability.
+            </p>
+          </div>
+          <div className="absolute top-0 right-0">
+            <ThemeToggle />
+          </div>
         </div>
 
         <Card className="w-full max-w-3xl p-6 sm:p-8 bg-transparent border-border/60">
