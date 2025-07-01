@@ -161,8 +161,9 @@ export default function Home() {
       setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
       setIsPollingBlock(true); // This starts the real-time updates.
 
-      // Run less disruptive benchmarks first while polling is active.
-      const cupsPromise = getCUPS(formData).then(result => {
+      // Run benchmarks sequentially to prevent network contention with the block polling.
+      // UI will update progressively as each promise resolves.
+      await getCUPS(formData).then(result => {
         if (result?.error) {
             setCups('Error');
         } else if (result) {
@@ -170,7 +171,7 @@ export default function Home() {
         }
       });
 
-      const effectiveRpsPromise = getEffectiveRps(formData).then(result => {
+      await getEffectiveRps(formData).then(result => {
         if (result?.error) {
             setEffectiveRps('Error');
         } else if (result) {
@@ -178,18 +179,13 @@ export default function Home() {
         }
       });
       
-      // Wait for CUPS and sequential RPS to finish. Block polling should be smooth during this.
-      await Promise.allSettled([cupsPromise, effectiveRpsPromise]);
-
-      // Now run the connection-heavy burst test. Block polling might lag here.
-      const burstRpsPromise = getBurstRps(formData).then(result => {
+      await getBurstRps(formData).then(result => {
         if (result?.error) {
             setBurstRps('Error');
         } else if (result) {
             setBurstRps(result.burstRps ?? '-');
         }
       });
-      await burstRpsPromise;
       
       // All benchmarks are complete.
       setIsBenchmarking(false);
