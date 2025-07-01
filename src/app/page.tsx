@@ -161,7 +161,9 @@ export default function Home() {
 
   const handleRpcUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRpcUrl(e.target.value);
-    setSelectedChainId('auto');
+    if (selectedChainId !== 'auto') {
+        setSelectedChainId('auto');
+    }
     setDetectedChainId(null);
     setDetectedChainName(null);
   };
@@ -487,7 +489,7 @@ export default function Home() {
                 <TableBody>
                   {history.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium max-w-xs truncate">{item.rpcUrl}</TableCell>
+                      <TableCell className="font-medium max-w-xs truncate select-text">{item.rpcUrl}</TableCell>
                       <TableCell>{item.chainName}</TableCell>
                       <TableCell className="text-right">{item.cups}</TableCell>
                       <TableCell className="text-right">{item.effectiveRps}</TableCell>
