@@ -1,7 +1,7 @@
 'use server';
 
 import {
-    detectChain as detectChainLogic,
+    detectChain as detectChainRpc,
     CHAIN_NAMES,
     CHAIN_CHECK_FUNCTIONS,
     measureCups,
@@ -15,7 +15,7 @@ export async function detectChain(formData: FormData) {
         return { error: 'RPC URL is required.' };
     }
     try {
-        const chainId = detectChainLogic(rpcUrl);
+        const chainId = await detectChainRpc(rpcUrl);
         const chainName = CHAIN_NAMES[chainId] || "Unknown";
         return { chainId, chainName };
     } catch (e: any) {

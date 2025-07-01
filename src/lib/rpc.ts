@@ -1,13 +1,22 @@
 
 const CHAIN_KEYWORDS: Record<string, string[]> = {
-    evm: ["eth", "ethereum", "bsc", "polygon", "matic", "avalanche", "avax", "arbitrum", "optimism", "fantom", "base"],
+    evm: [
+        "eth", "ethereum", "bsc", "polygon", "matic", "avalanche", "avax", 
+        "arbitrum", "optimism", "fantom", "base", "gnosis", "xdai", "celo", 
+        "moonbeam", "moonriver", "cronos", "boba", "metis", "aurora", "zksync", 
+        "scroll", "linea", "mantle", "blast", "mode", "sonic"
+    ],
     aptos: ["apt", "aptos"],
     sui: ["sui"],
     solana: ["sol", "solana"],
     injective: ["inj", "injective"],
-    cosmos: ["cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", "secret", "scrt"],
+    cosmos: [
+        "cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", 
+        "secret", "scrt", "mantra", "kava", "akash", "axelar", "stargaze", 
+        "agoric", "stride"
+    ],
     dydx: ["dydx"],
-    substrate: ["polkadot", "kusama", "moonbeam", "substrate"],
+    substrate: ["polkadot", "kusama", "substrate"],
     beacon: ["beacon", "consensus"],
 };
 
@@ -24,9 +33,10 @@ export const CHAIN_NAMES: Record<string, string> = {
     unknown: "Unknown",
 };
 
-export function detectChain(rpcUrl: string): string {
+export async function detectChain(rpcUrl: string): Promise<string> {
     const lowered = rpcUrl.toLowerCase();
     
+    // 1. Keyword matching for speed and for specific chains
     // Prioritize specific chains that might also match general keywords
     if (lowered.includes("injective") || lowered.includes("inj")) return 'injective';
     if (lowered.includes("beacon")) return 'beacon';
@@ -37,6 +47,28 @@ export function detectChain(rpcUrl: string): string {
             return chain;
         }
     }
+
+    // 2. If no keyword match, start probing endpoints. This will catch generic EVM urls.
+    const probeOrder = [
+        { chainId: 'evm', checkFunc: checkEvm },
+        { chainId: 'solana', checkFunc: checkSolana },
+        { chainId: 'sui', checkFunc: checkSui },
+        { chainId: 'aptos', checkFunc: checkAptos },
+        { chainId: 'cosmos', checkFunc: checkCosmos },
+        { chainId: 'substrate', checkFunc: checkSubstrate },
+        { chainId: 'beacon', checkFunc: checkBeacon },
+    ];
+
+    for (const probe of probeOrder) {
+        try {
+            await probe.checkFunc(rpcUrl);
+            // If the check function doesn't throw, we've found our chain type
+            return probe.chainId;
+        } catch (e) {
+            // This probe failed, continue to the next one
+        }
+    }
+
     return 'unknown';
 }
 
