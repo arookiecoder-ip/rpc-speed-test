@@ -213,7 +213,7 @@ export default function Home() {
       }
     };
 
-    blockUpdateInterval.current = setInterval(fetchAndUpdateBlock, 3000);
+    blockUpdateInterval.current = setInterval(fetchAndUpdateBlock, 1000);
 
     return () => {
       if (blockUpdateInterval.current) {
