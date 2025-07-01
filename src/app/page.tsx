@@ -9,7 +9,6 @@ import {
   Zap,
   Loader2,
   Settings2,
-  Moon,
   SlidersHorizontal,
   ServerCrash,
 } from 'lucide-react';
@@ -32,6 +31,7 @@ import {
     getBurstRps
 } from '@/app/actions';
 import { ChainIcon } from '@/components/chain-icon';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: React.ElementType, title: string, value: string | number, unit: string, isBenchmarking: boolean }) => (
   <Card className="bg-card/80 border-border/60 text-left">
@@ -142,7 +142,7 @@ export default function Home() {
       }
       
       resetMetrics();
-      setIsBenchmarking(true); // This will show loaders on cards that are reset
+      setIsBenchmarking(true); 
 
       const formData = new FormData();
       formData.append('rpcUrl', rpcUrl);
@@ -164,7 +164,7 @@ export default function Home() {
 
       // Run benchmarks sequentially to prevent network contention with the block polling.
       // UI will update progressively as each promise resolves.
-      await getCUPS(formData).then(result => {
+      getCUPS(formData).then(result => {
         if (result?.error) {
             setCups('Error');
         } else if (result) {
@@ -172,7 +172,7 @@ export default function Home() {
         }
       });
 
-      await getEffectiveRps(formData).then(result => {
+      getEffectiveRps(formData).then(result => {
         if (result?.error) {
             setEffectiveRps('Error');
         } else if (result) {
@@ -180,17 +180,17 @@ export default function Home() {
         }
       });
       
-      await getBurstRps(formData).then(result => {
+      getBurstRps(formData).then(result => {
         if (result?.error) {
             setBurstRps('Error');
         } else if (result) {
             setBurstRps(result.burstRps ?? '-');
         }
+      }).finally(() => {
+        // All benchmarks are complete.
+        setIsBenchmarking(false);
+        toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
       });
-      
-      // All benchmarks are complete.
-      setIsBenchmarking(false);
-      toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
   };
 
   useEffect(() => {
@@ -229,10 +229,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
       <header className="absolute top-0 left-0 right-0 p-4 flex justify-end">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Moon className="h-5 w-5" />
-          <span className="sr-only">Toggle Theme</span>
-        </Button>
+        <ThemeToggle />
       </header>
 
       <main className="flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center text-center gap-12">
