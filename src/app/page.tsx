@@ -330,7 +330,6 @@ export default function Home() {
     toast({ title: "History Cleared" });
   };
 
-  const isProcessing = isBenchmarking;
   const noParamsSelected = Object.values(benchmarkParams).every(v => !v);
 
   return (
@@ -342,7 +341,7 @@ export default function Home() {
       <main className="flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center text-center gap-12">
         <div className="flex flex-col gap-2">
           <h1 className="text-6xl font-bold font-headline" style={{ color: 'hsl(var(--primary))' }}>
-            Blockspeed
+            ChainDoctor
           </h1>
           <p className="text-muted-foreground text-lg max-w-md">
             Benchmark your blockchain RPC endpoint for speed and reliability.
@@ -364,6 +363,7 @@ export default function Home() {
                   value={rpcUrl}
                   onChange={handleRpcUrlChange}
                   disabled={isBenchmarking}
+                  suppressHydrationWarning
                 />
                 <ChainSelector 
                   value={selectedChainId}
@@ -383,7 +383,7 @@ export default function Home() {
                 </div>
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
-                disabled={!rpcUrl || (isBenchmarking && noParamsSelected)}
+                disabled={isBenchmarking ? false : (!rpcUrl || noParamsSelected)}
                 className="w-full h-12 text-base"
                 variant={isBenchmarking ? "destructive" : "default"}
                 >
@@ -491,7 +491,7 @@ export default function Home() {
         </Sheet>
       </div>
       <footer className="py-6 text-center text-muted-foreground text-sm">
-        Created by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
+        Created with <span className="text-red-500">❤️</span> by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
       </footer>
     </div>
   );
