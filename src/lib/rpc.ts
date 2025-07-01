@@ -142,7 +142,7 @@ export async function measureCups(checkFunc: (rpc: string) => Promise<number>, r
 
 export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const numRequests = 10;
+        const numRequests = 5;
         let successCount = 0;
         const start = performance.now();
         for (let i = 0; i < numRequests; i++) {
@@ -162,7 +162,7 @@ export async function measureEffectiveRps(checkFunc: (rpc: string) => Promise<nu
 
 export async function measureBurstRps(checkFunc: (rpc: string) => Promise<number>, rpc: string): Promise<number | null> {
     try {
-        const batchSize = 100;
+        const batchSize = 20;
         const start = performance.now();
         const burstPromises = Array(batchSize).fill(null).map(() => checkFunc(rpc));
         
