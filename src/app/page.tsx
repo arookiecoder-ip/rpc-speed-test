@@ -11,6 +11,8 @@ import {
   SlidersHorizontal,
   ServerCrash,
   Square,
+  History,
+  Trash2,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +23,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+
 import { Input } from '@/components/ui/input';
 import { useToast } from "@/hooks/use-toast"
 import { 
@@ -44,6 +55,17 @@ import {
 } from '@/components/ui/sheet';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+
+type BenchmarkResult = {
+  id: number;
+  rpcUrl: string;
+  chainName: string | null;
+  latestBlock: string | number;
+  cups: string | number;
+  effectiveRps: string | number;
+  burstRps: string | number;
+  timestamp: string;
+};
 
 const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: React.ElementType, title: string, value: string | number, unit: string, isBenchmarking: boolean }) => (
   <Card className="bg-card/80 border-border/60 text-left">
@@ -89,6 +111,7 @@ export default function Home() {
   const [selectedChainId, setSelectedChainId] = useState('auto');
   const [detectedChainId, setDetectedChainId] = useState<string | null>(null);
   const [detectedChainName, setDetectedChainName] = useState<string | null>(null);
+  const [history, setHistory] = useState<BenchmarkResult[]>([]);
 
   const { toast } = useToast();
   const [isBenchmarking, setIsBenchmarking] = useState(false);
@@ -109,10 +132,29 @@ export default function Home() {
     burstRps: true,
   });
 
+  useEffect(() => {
+    try {
+      const savedHistory = localStorage.getItem('benchmarkHistory');
+      if (savedHistory) {
+        setHistory(JSON.parse(savedHistory));
+      }
+    } catch (error) {
+      console.error("Failed to load history from localStorage", error);
+      toast({ title: "Could not load history", description: "Your benchmark history is stored in your browser, but it could not be loaded.", variant: "destructive" });
+    }
+  }, [toast]);
+
+
   const handleParamChange = (param: keyof typeof benchmarkParams, checked: boolean | 'indeterminate') => {
     if (typeof checked === 'boolean') {
       setBenchmarkParams(prev => ({ ...prev, [param]: checked }));
     }
+  };
+
+  const handleRpcUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setRpcUrl(e.target.value);
+    setDetectedChainId(null);
+    setDetectedChainName(null);
   };
 
   const stopPolling = () => {
@@ -154,6 +196,7 @@ export default function Home() {
       setIsBenchmarking(true); 
 
       let finalChainId = selectedChainId;
+      let finalChainName = CHAIN_NAMES[selectedChainId] || "Unknown";
 
       if (finalChainId === 'auto') {
           const detectFormData = new FormData();
@@ -168,18 +211,24 @@ export default function Home() {
               return;
           }
           finalChainId = detectResult.chainId;
+          finalChainName = detectResult.chainName;
           setDetectedChainId(detectResult.chainId);
           setDetectedChainName(detectResult.chainName);
           toast({ title: "Success", description: `Auto-detected ${detectResult.chainName} chain.` });
       } else {
         setDetectedChainId(selectedChainId);
-        setDetectedChainName(CHAIN_NAMES[selectedChainId] || "Unknown");
+        setDetectedChainName(finalChainName);
       }
 
       const formData = new FormData();
       formData.append('rpcUrl', rpcUrl);
       formData.append('chainId', finalChainId);
 
+      let tempLatestBlock: string | number = '-';
+      let tempCups: string | number = '-';
+      let tempEffectiveRps: string | number = '-';
+      let tempBurstRps: string | number = '-';
+      
       const initialBlockResult = await getLatestBlock(formData);
       if (isCancelledRef.current) { setIsBenchmarking(false); return; }
 
@@ -189,7 +238,8 @@ export default function Home() {
           setIsBenchmarking(false);
           return;
       }
-      setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
+      tempLatestBlock = initialBlockResult.latestBlock?.toLocaleString() ?? '-';
+      setLatestBlock(tempLatestBlock);
       
       if (benchmarkParams.latestBlock) {
         setIsPollingBlock(true);
@@ -198,32 +248,47 @@ export default function Home() {
       if (benchmarkParams.cups) {
         const cupsResult = await getCUPS(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (cupsResult?.error) setCups('Error');
-        else if (cupsResult) setCups(cupsResult.cups ?? '-');
+        if (cupsResult?.error) { setCups('Error'); tempCups = 'Error'; }
+        else if (cupsResult) { setCups(cupsResult.cups ?? '-'); tempCups = cupsResult.cups ?? '-'; }
       }
       
       if (benchmarkParams.effectiveRps) {
         const effectiveRpsResult = await getEffectiveRps(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (effectiveRpsResult?.error) setEffectiveRps('Error');
-        else if (effectiveRpsResult) setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-');
+        if (effectiveRpsResult?.error) { setEffectiveRps('Error'); tempEffectiveRps = 'Error'; }
+        else if (effectiveRpsResult) { setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-'); tempEffectiveRps = effectiveRpsResult.effectiveRps ?? '-'; }
       }
 
       if (benchmarkParams.burstRps) {
         const burstRpsResult = await getBurstRps(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (burstRpsResult?.error) setBurstRps('Error');
-        else if (burstRpsResult) setBurstRps(burstRpsResult.burstRps ?? '-');
+        if (burstRpsResult?.error) { setBurstRps('Error'); tempBurstRps = 'Error'; }
+        else if (burstRpsResult) { setBurstRps(burstRpsResult.burstRps ?? '-'); tempBurstRps = burstRpsResult.burstRps ?? '-'; }
       }
-
-      setIsBenchmarking(false);
       
+      setIsBenchmarking(false);
+
       if (!benchmarkParams.latestBlock) {
         stopPolling();
       }
 
       if (!isCancelledRef.current) {
           toast({ title: "Benchmark Complete", description: "Selected metrics gathered." });
+
+          const newResult: BenchmarkResult = {
+              id: Date.now(),
+              rpcUrl: rpcUrl,
+              chainName: finalChainName,
+              latestBlock: benchmarkParams.latestBlock ? tempLatestBlock : 'N/A',
+              cups: benchmarkParams.cups ? tempCups : 'N/A',
+              effectiveRps: benchmarkParams.effectiveRps ? tempEffectiveRps : 'N/A',
+              burstRps: benchmarkParams.burstRps ? tempBurstRps : 'N/A',
+              timestamp: new Date().toLocaleString(),
+          };
+
+          const newHistory = [newResult, ...history].slice(0, 50); // Keep last 50 results
+          setHistory(newHistory);
+          localStorage.setItem('benchmarkHistory', JSON.stringify(newHistory));
       }
   };
 
@@ -256,7 +321,13 @@ export default function Home() {
         clearInterval(blockUpdateInterval.current);
       }
     };
-  }, [isPollingBlock, rpcUrl, detectedChainId]);
+  }, [isPollingBlock, rpcUrl, detectedChainId, toast]);
+
+  const handleClearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem('benchmarkHistory');
+    toast({ title: "History Cleared" });
+  };
 
   const isProcessing = isBenchmarking;
   const noParamsSelected = Object.values(benchmarkParams).every(v => !v);
@@ -290,7 +361,7 @@ export default function Home() {
                   placeholder="https://your-rpc-endpoint.com"
                   className="bg-input border-border/80 flex-grow text-base h-12"
                   value={rpcUrl}
-                  onChange={(e) => setRpcUrl(e.target.value)}
+                  onChange={handleRpcUrlChange}
                   disabled={isProcessing}
                   suppressHydrationWarning
                 />
@@ -301,13 +372,13 @@ export default function Home() {
                 />
               </div>
               <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground h-8">
-                  {(isBenchmarking && detectedChainId) ? (
-                    <DetectedChain chainId={detectedChainId} chainName={detectedChainName} />
-                  ) : (isBenchmarking) ? (
+                  {(isBenchmarking && selectedChainId === 'auto') ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin" />
                       <span>Detecting...</span>
                     </>
+                  ) : (detectedChainId && detectedChainName) ? (
+                    <DetectedChain chainId={detectedChainId} chainName={detectedChainName} />
                   ) : null}
                 </div>
                <Button 
@@ -339,7 +410,50 @@ export default function Home() {
           <MetricCard icon={Zap} title="Burst RPS (Parallel)" value={burstRps} unit="req/sec" isBenchmarking={isBenchmarking && benchmarkParams.burstRps} />
         </div>
 
+        {history.length > 0 && (
+          <Card className="w-full max-w-4xl bg-transparent border-border/60">
+            <CardHeader className="flex flex-row items-center justify-between">
+                <div className="text-left">
+                    <CardTitle className="font-headline text-2xl flex items-center gap-2">
+                        <History className="w-6 h-6" />
+                        Benchmark History
+                    </CardTitle>
+                    <CardDescription>Your last 50 results are saved in your browser.</CardDescription>
+                </div>
+                <Button variant="outline" size="icon" onClick={handleClearHistory} aria-label="Clear History">
+                    <Trash2 className="h-4 w-4" />
+                </Button>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>RPC Endpoint</TableHead>
+                    <TableHead>Chain</TableHead>
+                    <TableHead className="text-right">CUPS</TableHead>
+                    <TableHead className="text-right">Effective RPS</TableHead>
+                    <TableHead className="text-right">Burst RPS</TableHead>
+                    <TableHead className="text-right">Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {history.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-medium max-w-xs truncate">{item.rpcUrl}</TableCell>
+                      <TableCell>{item.chainName}</TableCell>
+                      <TableCell className="text-right">{item.cups}</TableCell>
+                      <TableCell className="text-right">{item.effectiveRps}</TableCell>
+                      <TableCell className="text-right">{item.burstRps}</TableCell>
+                      <TableCell className="text-right">{item.timestamp}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        )}
       </main>
+
        <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center">
         <Sheet>
             <SheetTrigger asChild>
