@@ -1,6 +1,7 @@
 
 
 
+
 const CHAIN_KEYWORDS: Record<string, string[]> = {
     evm: [
         "eth", "ethereum", "bsc", "binance", "bnb", "polygon", "matic", "avalanche", "avax", 
@@ -161,29 +162,44 @@ async function checkAptos(rpc: string): Promise<number> {
 
 async function checkCosmos(rpc: string): Promise<number> {
     const baseUrl = rpc.replace(/\/$/, '');
+    // Ordered from most likely/modern to least likely/legacy
     const endpoints = [
-        `${baseUrl}/blocks/latest`,
-        `${baseUrl}/cosmos/base/tendermint/v1beta1/blocks/latest`,
-        `${baseUrl}/status`
+        `${baseUrl}/cosmos/base/tendermint/v1beta1/blocks/latest`, // Cosmos SDK v0.45+ REST
+        `${baseUrl}/blocks/latest`,                                // Older REST
+        `${baseUrl}/status`,                                       // Tendermint RPC
+        `${baseUrl}/abci_info`,                                    // Tendermint RPC
     ];
 
     for (const url of endpoints) {
         try {
-            const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+            const res = await fetch(url, { 
+                headers: { 'Accept': 'application/json' }, 
+                signal: AbortSignal.timeout(5000) 
+            });
+
             if (res.ok) {
                 const data = await res.json();
-                if (url.endsWith('/blocks/latest')) {
-                    // Handle different structures
-                    const height = data.block?.header?.height || data.header?.height;
-                    if(height) return parseInt(height);
-                } else if (url.endsWith('/status')) {
-                    const height = data.result?.sync_info?.latest_block_height;
-                    if(height) return parseInt(height);
+                let height: string | undefined;
+
+                if (url.includes('/blocks/latest')) {
+                    // Handles both { "block": { "header": { "height": "123" } } }
+                    // and { "header": { "height": "123" } }
+                    height = data.block?.header?.height || data.header?.height;
+                } else if (url.includes('/status')) {
+                    height = data.result?.sync_info?.latest_block_height;
+                } else if (url.includes('/abci_info')) {
+                    height = data.result?.response?.last_block_height;
+                }
+                
+                if (height && !isNaN(parseInt(height))) {
+                    return parseInt(height, 10);
                 }
             }
-        } catch (e) { /* continue to next endpoint */ }
+        } catch (e) {
+            // Suppress errors and continue to the next endpoint
+        }
     }
-    throw new Error('All Cosmos endpoints failed. The RPC might be incorrect or offline.');
+    throw new Error('All Cosmos endpoints failed. The RPC might be incorrect, offline, or not a compatible Cosmos-based chain.');
 }
 
 async function checkSubstrate(rpc: string): Promise<number> {
