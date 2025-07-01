@@ -9,6 +9,7 @@ import {
     measureEffectiveRps,
     measureBurstRps
 } from '@/lib/rpc';
+import { sendFailureReport } from './failureReportActions';
 
 export async function detectChain(formData: FormData) {
     const rpcUrl = formData.get('rpcUrl') as string;
@@ -20,6 +21,11 @@ export async function detectChain(formData: FormData) {
         const chainName = CHAIN_NAMES[chainId] || "Unknown";
         return { chainId, chainName };
     } catch (e: any) {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Chain Detection',
+            errorMessage: e.message,
+        });
         return { error: e.message };
     }
 }
@@ -51,6 +57,11 @@ export async function getLatestBlock(formData: FormData) {
         const latestBlock = await checkFunc(rpcUrl);
         return { latestBlock };
     } catch (e: any) {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Get Latest Block',
+            errorMessage: e.message,
+        });
         return { error: e.message || 'The RPC endpoint is unreachable or invalid.' };
     }
 }
@@ -65,6 +76,11 @@ export async function getCUPS(formData: FormData) {
         const cups = cupsValue !== null ? cupsValue.toFixed(2) : '-';
         return { cups };
     } catch (e: any) {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Get CUPS',
+            errorMessage: e.message,
+        });
         return { error: e.message || 'Failed to measure CUPS.' };
     }
 }
@@ -79,6 +95,11 @@ export async function getEffectiveRps(formData: FormData) {
         const effectiveRps = rpsValue !== null ? Math.round(rpsValue) : '-';
         return { effectiveRps };
     } catch (e: any) {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Get Effective RPS',
+            errorMessage: e.message,
+        });
         return { error: e.message || 'Failed to measure Effective RPS.' };
     }
 }
@@ -93,6 +114,11 @@ export async function getBurstRps(formData: FormData) {
         const burstRps = rpsValue !== null ? Math.round(rpsValue) : '-';
         return { burstRps };
     } catch (e: any) {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Get Burst RPS',
+            errorMessage: e.message,
+        });
         return { error: e.message || 'Failed to measure Burst RPS.' };
     }
 }
