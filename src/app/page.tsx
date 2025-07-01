@@ -144,6 +144,7 @@ export default function Home() {
 
   const handleRpcUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setRpcUrl(e.target.value);
+    setSelectedChainId('auto');
     setDetectedChainId(null);
     setDetectedChainName(null);
   };
