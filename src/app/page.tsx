@@ -257,6 +257,7 @@ export default function Home() {
                   value={rpcUrl}
                   onChange={(e) => setRpcUrl(e.target.value)}
                   disabled={isProcessing}
+                  suppressHydrationWarning
                 />
                 <ChainSelector 
                   value={selectedChainId}
@@ -276,7 +277,7 @@ export default function Home() {
                 </div>
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
-                disabled={isProcessing || !rpcUrl}
+                disabled={!rpcUrl}
                 className="w-full h-12 text-base"
                 variant={isBenchmarking ? "destructive" : "default"}
                 >
