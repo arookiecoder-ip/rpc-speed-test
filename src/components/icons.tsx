@@ -66,3 +66,18 @@ export const CosmosIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="m17.66 6.34 1.41-1.41" />
   </svg>
 );
+
+export const AptosIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path d="M12 2L2 12L12 22L22 12L12 2Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M12 2V22" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+    <path d="M2 12H22" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+  </svg>
+);
+
+export const SuiIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <path d="M17 16.5C17 18.9853 14.9853 21 12.5 21C10.0147 21 8 18.9853 8 16.5C8 14.0147 10.0147 12 12.5 12H16" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M8 7.5C8 5.01472 10.0147 3 12.5 3C14.9853 3 17 5.01472 17 7.5C17 9.98528 14.9853 12 12.5 12H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);

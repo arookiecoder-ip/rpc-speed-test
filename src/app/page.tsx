@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useTransition } from 'react';
 import {
   Box,
   RefreshCw,
@@ -10,6 +10,7 @@ import {
   Settings2,
   Moon,
   SlidersHorizontal,
+  ServerCrash,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { useToast } from "@/hooks/use-toast"
+import { detectChain, runBenchmark } from '@/app/actions';
+import { ChainIcon } from '@/components/chain-icon';
+import { Separator } from '@/components/ui/separator';
 
 const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: React.ElementType, title: string, value: string | number, unit: string, isBenchmarking: boolean }) => (
   <Card className="bg-card/80 border-border/60 text-left">
@@ -29,7 +34,7 @@ const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: 
       <Icon className="w-4 h-4 text-muted-foreground" />
     </CardHeader>
     <CardContent>
-        {isBenchmarking && value === '-' ? (
+        {(isBenchmarking && value === '-') ? (
             <div className="h-8 flex items-center">
               <Loader2 className="h-6 w-6 animate-spin" />
             </div>
@@ -41,38 +46,104 @@ const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: 
   </Card>
 );
 
+const DetectedChain = ({ chainId, chainName }: { chainId: string | null, chainName: string | null }) => {
+    if (!chainId || !chainName) return null;
+
+    if (chainId === 'unknown') {
+        return (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+                <ServerCrash className="w-5 h-5" />
+                <span>Unknown / Invalid RPC</span>
+            </div>
+        );
+    }
+    return (
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <ChainIcon chain={chainId} className="w-5 h-5" />
+            <span>{chainName}</span>
+        </div>
+    );
+};
+
+
 export default function Home() {
   const [rpcUrl, setRpcUrl] = useState('');
-  const [isDetecting, setIsDetecting] = useState(false);
-  const [isBenchmarking, setIsBenchmarking] = useState(false);
+  const [detectedChainId, setDetectedChainId] = useState<string | null>(null);
+  const [detectedChainName, setDetectedChainName] = useState<string | null>(null);
+
+  const { toast } = useToast();
+  const [isDetecting, startDetectTransition] = useTransition();
+  const [isBenchmarking, startBenchmarkTransition] = useTransition();
 
   const [latestBlock, setLatestBlock] = useState<string | number>('-');
   const [cups, setCups] = useState<string | number>('-');
   const [effectiveRps, setEffectiveRps] = useState<string | number>('-');
   const [burstRps, setBurstRps] = useState<string | number>('-');
 
+  const resetMetrics = () => {
+      setLatestBlock('-');
+      setCups('-');
+      setEffectiveRps('-');
+      setBurstRps('-');
+  };
+
   const handleDetectChain = async () => {
-    setIsDetecting(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsDetecting(false);
+      if (!rpcUrl) {
+          toast({ title: "Error", description: "Please enter an RPC URL.", variant: "destructive" });
+          return;
+      }
+      resetMetrics();
+      setDetectedChainId(null);
+      setDetectedChainName(null);
+
+      startDetectTransition(async () => {
+          const formData = new FormData();
+          formData.append('rpcUrl', rpcUrl);
+          const result = await detectChain(formData);
+
+          if (result?.error) {
+              toast({ title: "Detection Failed", description: result.error, variant: "destructive" });
+              setDetectedChainId('unknown');
+              setDetectedChainName('Unknown');
+          } else if (result?.chainId) {
+              setDetectedChainId(result.chainId);
+              setDetectedChainName(result.chainName);
+              toast({ title: "Success", description: `Detected ${result.chainName} chain.`});
+          }
+      });
   };
 
   const handleStartBenchmark = async () => {
-    setIsBenchmarking(true);
-    setLatestBlock('-');
-    setCups('-');
-    setEffectiveRps('-');
-    setBurstRps('-');
+      if (!rpcUrl) {
+          toast({ title: "Error", description: "Please enter an RPC URL.", variant: "destructive" });
+          return;
+      }
+      if (!detectedChainId || detectedChainId === 'unknown') {
+          toast({ title: "Error", description: "Please detect a valid chain first.", variant: "destructive" });
+          return;
+      }
+      
+      resetMetrics();
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
+      startBenchmarkTransition(async () => {
+          const formData = new FormData();
+          formData.append('rpcUrl', rpcUrl);
+          formData.append('chainId', detectedChainId);
+          const result = await runBenchmark(formData);
 
-    setLatestBlock(Math.floor(Math.random() * 10000000 + 15000000).toLocaleString());
-    setCups(Math.floor(Math.random() * (150 - 50 + 1) + 50));
-    setEffectiveRps(Math.floor(Math.random() * (120 - 40 + 1) + 40));
-    setBurstRps(Math.floor(Math.random() * (200 - 80 + 1) + 80));
-
-    setIsBenchmarking(false);
+          if (result?.error) {
+              toast({ title: "Benchmark Failed", description: result.error, variant: "destructive" });
+          } else if (result) {
+              setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
+              setCups(result.cups ?? '-');
+              setEffectiveRps(result.effectiveRps ?? '-');
+              setBurstRps(result.burstRps ?? '-');
+              toast({ title: "Benchmark Complete", description: "Results are in."});
+          }
+      });
   };
+
+  const isProcessing = isDetecting || isBenchmarking;
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
@@ -99,25 +170,39 @@ export default function Home() {
             <CardDescription>Enter your RPC URL to begin.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="flex flex-col sm:flex-row items-center gap-4">
-              <Input
-                type="text"
-                placeholder="https://your-rpc-endpoint.com"
-                className="bg-input border-border/80 flex-grow text-base h-12"
-                value={rpcUrl}
-                onChange={(e) => setRpcUrl(e.target.value)}
-                disabled={isDetecting || isBenchmarking}
-              />
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button onClick={handleDetectChain} disabled={!rpcUrl || isDetecting || isBenchmarking} className="w-full sm:w-auto h-12 text-base bg-primary text-primary-foreground hover:bg-primary/90">
-                  {isDetecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
-                  Detect Chain
-                </Button>
-                <Button onClick={handleStartBenchmark} disabled={isBenchmarking} className="w-full sm:w-auto h-12 text-base bg-accent text-accent-foreground hover:bg-accent/90">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <Input
+                  type="text"
+                  placeholder="https://your-rpc-endpoint.com"
+                  className="bg-input border-border/80 flex-grow text-base h-12"
+                  value={rpcUrl}
+                  onChange={(e) => setRpcUrl(e.target.value)}
+                  disabled={isProcessing}
+                />
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                  <Button onClick={handleDetectChain} disabled={!rpcUrl || isProcessing} className="w-full sm:w-auto h-12 text-base bg-primary text-primary-foreground hover:bg-primary/90">
+                    {isDetecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
+                    Detect Chain
+                  </Button>
+                </div>
+              </div>
+              {(isDetecting || detectedChainId) && (
+                <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground h-8">
+                  {isDetecting ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Detecting...</span>
+                    </>
+                  ) : (
+                    <DetectedChain chainId={detectedChainId} chainName={detectedChainName} />
+                  )}
+                </div>
+              )}
+               <Button onClick={handleStartBenchmark} disabled={isProcessing || !detectedChainId || detectedChainId === 'unknown'} className="w-full h-12 text-base bg-accent text-accent-foreground hover:bg-accent/90">
                   {isBenchmarking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
                   Start Benchmark
                 </Button>
-              </div>
             </div>
           </CardContent>
         </Card>
