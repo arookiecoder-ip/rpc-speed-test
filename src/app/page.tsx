@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useTransition, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Box,
   RefreshCw,
@@ -11,7 +11,6 @@ import {
   SlidersHorizontal,
   ServerCrash,
   Square,
-  HelpCircle
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -35,6 +34,16 @@ import { CHAIN_NAMES } from '@/lib/rpc';
 import { ChainIcon } from '@/components/chain-icon';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ChainSelector } from '@/components/chain-selector';
+import { 
+    Sheet, 
+    SheetContent, 
+    SheetDescription, 
+    SheetHeader, 
+    SheetTitle, 
+    SheetTrigger 
+} from '@/components/ui/sheet';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 
 const MetricCard = ({ icon: Icon, title, value, unit, isBenchmarking }: { icon: React.ElementType, title: string, value: string | number, unit: string, isBenchmarking: boolean }) => (
   <Card className="bg-card/80 border-border/60 text-left">
@@ -92,6 +101,19 @@ export default function Home() {
   const [isPollingBlock, setIsPollingBlock] = useState(false);
   const blockUpdateInterval = useRef<NodeJS.Timeout | null>(null);
   const isCancelledRef = useRef(false);
+
+  const [benchmarkParams, setBenchmarkParams] = useState({
+    latestBlock: true,
+    cups: true,
+    effectiveRps: true,
+    burstRps: true,
+  });
+
+  const handleParamChange = (param: keyof typeof benchmarkParams, checked: boolean | 'indeterminate') => {
+    if (typeof checked === 'boolean') {
+      setBenchmarkParams(prev => ({ ...prev, [param]: checked }));
+    }
+  };
 
   const stopPolling = () => {
     if (blockUpdateInterval.current) {
@@ -168,28 +190,40 @@ export default function Home() {
           return;
       }
       setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
-      setIsPollingBlock(true);
-
-      const cupsResult = await getCUPS(formData);
-      if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-      if (cupsResult?.error) setCups('Error');
-      else if (cupsResult) setCups(cupsResult.cups ?? '-');
       
-      const effectiveRpsResult = await getEffectiveRps(formData);
-      if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-      if (effectiveRpsResult?.error) setEffectiveRps('Error');
-      else if (effectiveRpsResult) setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-');
+      if (benchmarkParams.latestBlock) {
+        setIsPollingBlock(true);
+      }
 
-      const burstRpsResult = await getBurstRps(formData);
-      if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-      if (burstRpsResult?.error) setBurstRps('Error');
-      else if (burstRpsResult) setBurstRps(burstRpsResult.burstRps ?? '-');
+      if (benchmarkParams.cups) {
+        const cupsResult = await getCUPS(formData);
+        if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
+        if (cupsResult?.error) setCups('Error');
+        else if (cupsResult) setCups(cupsResult.cups ?? '-');
+      }
+      
+      if (benchmarkParams.effectiveRps) {
+        const effectiveRpsResult = await getEffectiveRps(formData);
+        if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
+        if (effectiveRpsResult?.error) setEffectiveRps('Error');
+        else if (effectiveRpsResult) setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-');
+      }
+
+      if (benchmarkParams.burstRps) {
+        const burstRpsResult = await getBurstRps(formData);
+        if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
+        if (burstRpsResult?.error) setBurstRps('Error');
+        else if (burstRpsResult) setBurstRps(burstRpsResult.burstRps ?? '-');
+      }
 
       setIsBenchmarking(false);
-      stopPolling();
+      
+      if (!benchmarkParams.latestBlock) {
+        stopPolling();
+      }
 
       if (!isCancelledRef.current) {
-          toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
+          toast({ title: "Benchmark Complete", description: "Selected metrics gathered." });
       }
   };
 
@@ -225,6 +259,7 @@ export default function Home() {
   }, [isPollingBlock, rpcUrl, detectedChainId]);
 
   const isProcessing = isBenchmarking;
+  const noParamsSelected = Object.values(benchmarkParams).every(v => !v);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
@@ -277,7 +312,7 @@ export default function Home() {
                 </div>
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
-                disabled={!rpcUrl}
+                disabled={!rpcUrl || isProcessing || noParamsSelected}
                 className="w-full h-12 text-base"
                 variant={isBenchmarking ? "destructive" : "default"}
                 >
@@ -298,18 +333,48 @@ export default function Home() {
         </Card>
 
         <div className="w-full max-w-4xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard icon={Box} title="Latest Block" value={latestBlock} unit="number" isBenchmarking={isBenchmarking} />
-          <MetricCard icon={RefreshCw} title="Chain Usage Per Second (CUPS)" value={cups} unit="units/sec" isBenchmarking={isBenchmarking}/>
-          <MetricCard icon={ArrowRightLeft} title="Effective RPS (Sequential)" value={effectiveRps} unit="req/sec" isBenchmarking={isBenchmarking} />
-          <MetricCard icon={Zap} title="Burst RPS (Parallel)" value={burstRps} unit="req/sec" isBenchmarking={isBenchmarking} />
+          <MetricCard icon={Box} title="Latest Block" value={latestBlock} unit="number" isBenchmarking={isBenchmarking && benchmarkParams.latestBlock} />
+          <MetricCard icon={RefreshCw} title="Chain Usage Per Second (CUPS)" value={cups} unit="units/sec" isBenchmarking={isBenchmarking && benchmarkParams.cups}/>
+          <MetricCard icon={ArrowRightLeft} title="Effective RPS (Sequential)" value={effectiveRps} unit="req/sec" isBenchmarking={isBenchmarking && benchmarkParams.effectiveRps} />
+          <MetricCard icon={Zap} title="Burst RPS (Parallel)" value={burstRps} unit="req/sec" isBenchmarking={isBenchmarking && benchmarkParams.burstRps} />
         </div>
 
       </main>
        <div className="absolute top-1/2 right-4 -translate-y-1/2 flex items-center">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground bg-card/80 border-border/60 border rounded-full">
-          <SlidersHorizontal className="h-5 w-5" />
-          <span className="sr-only">Settings</span>
-        </Button>
+        <Sheet>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground bg-card/80 border-border/60 border rounded-full">
+                  <SlidersHorizontal className="h-5 w-5" />
+                  <span className="sr-only">Settings</span>
+                </Button>
+            </SheetTrigger>
+            <SheetContent>
+                <SheetHeader>
+                    <SheetTitle>Benchmark Settings</SheetTitle>
+                    <SheetDescription>
+                        Select which parameters to run during the benchmark.
+                    </SheetDescription>
+                </SheetHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="latestBlock" checked={benchmarkParams.latestBlock} onCheckedChange={(checked) => handleParamChange('latestBlock', checked)} />
+                        <Label htmlFor="latestBlock" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Live Block Number</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="cups" checked={benchmarkParams.cups} onCheckedChange={(checked) => handleParamChange('cups', checked)} />
+                        <Label htmlFor="cups" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Chain Usage Per Second (CUPS)</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="effectiveRps" checked={benchmarkParams.effectiveRps} onCheckedChange={(checked) => handleParamChange('effectiveRps', checked)} />
+                        <Label htmlFor="effectiveRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Effective RPS (Sequential)</Label>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                        <Checkbox id="burstRps" checked={benchmarkParams.burstRps} onCheckedChange={(checked) => handleParamChange('burstRps', checked)} />
+                        <Label htmlFor="burstRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Burst RPS (Parallel)</Label>
+                    </div>
+                </div>
+            </SheetContent>
+        </Sheet>
       </div>
       <footer className="py-6 text-center text-muted-foreground text-sm">
         Created by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
