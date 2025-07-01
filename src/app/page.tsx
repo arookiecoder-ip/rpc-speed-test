@@ -12,6 +12,7 @@ import {
   Square,
   History,
   Trash2,
+  MessageSquare,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -31,7 +32,18 @@ import {
   TableRow,
 } from "@/components/ui/table"
 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from "@/hooks/use-toast"
 import { 
     detectChain as detectChainAction, 
@@ -40,6 +52,7 @@ import {
     getEffectiveRps,
     getBurstRps
 } from '@/app/actions';
+import { sendFeedback } from '@/app/feedbackActions';
 import { CHAIN_NAMES } from '@/lib/rpc';
 import { ChainIcon } from '@/components/chain-icon';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -122,6 +135,10 @@ export default function Home() {
     effectiveRps: true,
     burstRps: true,
   });
+
+  const [feedbackText, setFeedbackText] = useState('');
+  const [isSendingFeedback, setIsSendingFeedback] = useState(false);
+  const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -321,6 +338,25 @@ export default function Home() {
     toast({ title: "History Cleared" });
   };
 
+  const handleFeedbackSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSendingFeedback(true);
+
+    const formData = new FormData();
+    formData.append('feedback', feedbackText);
+    const result = await sendFeedback(formData);
+
+    if (result.error) {
+        toast({ title: "Feedback Error", description: result.error, variant: "destructive" });
+    } else {
+        toast({ title: "Feedback Sent", description: result.success });
+        setFeedbackText('');
+        setIsFeedbackDialogOpen(false);
+    }
+    
+    setIsSendingFeedback(false);
+  }
+
   const noParamsSelected = Object.values(benchmarkParams).every(v => !v);
 
   return (
@@ -465,8 +501,43 @@ export default function Home() {
         )}
       </main>
 
-      <footer className="py-6 text-center text-muted-foreground text-sm">
-        Created with <span className="text-red-500">❤️</span> by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a>
+      <footer className="py-6 text-center text-muted-foreground text-sm flex items-center justify-center gap-4">
+        <span>Created with <span className="text-red-500">❤️</span> by <a href="https://github.com/arookiecoder-ip" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">arookiecoder</a></span>
+        
+        <Dialog open={isFeedbackDialogOpen} onOpenChange={setIsFeedbackDialogOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Feedback
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+                <form onSubmit={handleFeedbackSubmit}>
+                    <DialogHeader>
+                        <DialogTitle>Provide Feedback</DialogTitle>
+                        <DialogDescription>
+                            We'd love to hear your thoughts on what's working and what could be improved.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <Textarea 
+                            id="feedback"
+                            placeholder="Your feedback..."
+                            value={feedbackText}
+                            onChange={(e) => setFeedbackText(e.target.value)}
+                            className="col-span-3"
+                            rows={5}
+                            disabled={isSendingFeedback}
+                        />
+                    </div>
+                    <DialogFooter>
+                        <Button type="submit" disabled={isSendingFeedback || feedbackText.length < 10}>
+                            {isSendingFeedback ? (<><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</>) : 'Send Feedback'}
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
       </footer>
     </div>
   );
