@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
+import { Analytics } from '@vercel/analytics/next';
 
 export const metadata: Metadata = {
   title: 'ChainDoctor',
@@ -28,6 +29,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
           {children}
+          <Analytics />
           <Toaster />
         </ThemeProvider>
       </body>
