@@ -229,21 +229,21 @@ export default function Home() {
       let tempEffectiveRps: string | number = '-';
       let tempBurstRps: string | number = '-';
       
-      const initialBlockResult = await getLatestBlock(formData);
-      if (isCancelledRef.current) { setIsBenchmarking(false); return; }
-
-      if (initialBlockResult?.error) {
-          setLatestBlock('Error');
-          toast({ title: "Connection Failed", description: initialBlockResult.error, variant: "destructive" });
-          setIsBenchmarking(false);
-          return;
-      }
-      tempLatestBlock = initialBlockResult.latestBlock?.toLocaleString() ?? '-';
-      setLatestBlock(tempLatestBlock);
-      
       if (benchmarkParams.latestBlock) {
+        const initialBlockResult = await getLatestBlock(formData);
+        if (isCancelledRef.current) { setIsBenchmarking(false); return; }
+
+        if (initialBlockResult?.error) {
+            setLatestBlock('Error');
+            toast({ title: "Connection Failed", description: initialBlockResult.error, variant: "destructive" });
+            setIsBenchmarking(false);
+            return;
+        }
+        tempLatestBlock = initialBlockResult.latestBlock?.toLocaleString() ?? '-';
+        setLatestBlock(tempLatestBlock);
         setIsPollingBlock(true);
       }
+      
 
       if (benchmarkParams.cups) {
         const cupsResult = await getCUPS(formData);
@@ -362,13 +362,12 @@ export default function Home() {
                   className="bg-input border-border/80 flex-grow text-base h-12"
                   value={rpcUrl}
                   onChange={handleRpcUrlChange}
-                  disabled={isProcessing}
-                  suppressHydrationWarning
+                  disabled={isBenchmarking}
                 />
                 <ChainSelector 
                   value={selectedChainId}
                   onChange={setSelectedChainId}
-                  disabled={isProcessing}
+                  disabled={isBenchmarking}
                 />
               </div>
               <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground h-8">
@@ -383,7 +382,7 @@ export default function Home() {
                 </div>
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
-                disabled={!rpcUrl || isProcessing || noParamsSelected}
+                disabled={!rpcUrl || isBenchmarking || noParamsSelected}
                 className="w-full h-12 text-base"
                 variant={isBenchmarking ? "destructive" : "default"}
                 >
