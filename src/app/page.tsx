@@ -155,6 +155,7 @@ export default function Home() {
     setRpcUrl(e.target.value);
     setDetectedChainId(null);
     setDetectedChainName(null);
+    setSelectedChainId('auto');
   };
 
   const stopPolling = () => {
@@ -382,7 +383,7 @@ export default function Home() {
                 </div>
                <Button 
                 onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
-                disabled={!rpcUrl || isBenchmarking && noParamsSelected}
+                disabled={!rpcUrl || (isBenchmarking && noParamsSelected)}
                 className="w-full h-12 text-base"
                 variant={isBenchmarking ? "destructive" : "default"}
                 >
@@ -495,5 +496,3 @@ export default function Home() {
     </div>
   );
 }
-
-    
