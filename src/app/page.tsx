@@ -11,6 +11,7 @@ import {
   Settings2,
   SlidersHorizontal,
   ServerCrash,
+  Square,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ export default function Home() {
   
   const [isPollingBlock, setIsPollingBlock] = useState(false);
   const blockUpdateInterval = useRef<NodeJS.Timeout | null>(null);
+  const isCancelledRef = useRef(false);
 
   const stopPolling = () => {
     if (blockUpdateInterval.current) {
@@ -131,6 +133,16 @@ export default function Home() {
       });
   };
 
+  const handleStopBenchmark = () => {
+    isCancelledRef.current = true;
+    setIsBenchmarking(false);
+    stopPolling();
+    toast({
+      title: 'Benchmark Cancelled',
+      description: 'The process was stopped by the user.',
+    });
+  };
+
   const handleStartBenchmark = async () => {
       if (!rpcUrl) {
           toast({ title: "Error", description: "Please enter an RPC URL.", variant: "destructive" });
@@ -142,55 +154,47 @@ export default function Home() {
       }
       
       resetMetrics();
+      isCancelledRef.current = false;
       setIsBenchmarking(true); 
 
       const formData = new FormData();
       formData.append('rpcUrl', rpcUrl);
       formData.append('chainId', detectedChainId);
 
-      // Await the first block check to ensure the endpoint is reachable
       const initialBlockResult = await getLatestBlock(formData);
+
+      if (isCancelledRef.current) return;
 
       if (initialBlockResult?.error) {
           setLatestBlock('Error');
           toast({ title: "Connection Failed", description: initialBlockResult.error, variant: "destructive" });
-          setIsBenchmarking(false); // Stop if we can't even connect
+          setIsBenchmarking(false);
           return;
       }
       
-      // Connection is good. Set initial block and start polling immediately.
       setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
-      setIsPollingBlock(true); // This starts the real-time updates.
+      setIsPollingBlock(true);
 
-      // Run benchmarks sequentially to prevent network contention with the block polling.
-      // UI will update progressively as each promise resolves.
-      getCUPS(formData).then(result => {
-        if (result?.error) {
-            setCups('Error');
-        } else if (result) {
-            setCups(result.cups ?? '-');
-        }
-      });
-
-      getEffectiveRps(formData).then(result => {
-        if (result?.error) {
-            setEffectiveRps('Error');
-        } else if (result) {
-            setEffectiveRps(result.effectiveRps ?? '-');
-        }
-      });
+      const cupsResult = await getCUPS(formData);
+      if (isCancelledRef.current) return;
+      if (cupsResult?.error) setCups('Error');
+      else if (cupsResult) setCups(cupsResult.cups ?? '-');
       
-      getBurstRps(formData).then(result => {
-        if (result?.error) {
-            setBurstRps('Error');
-        } else if (result) {
-            setBurstRps(result.burstRps ?? '-');
-        }
-      }).finally(() => {
-        // All benchmarks are complete.
-        setIsBenchmarking(false);
-        toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
-      });
+      const effectiveRpsResult = await getEffectiveRps(formData);
+      if (isCancelledRef.current) return;
+      if (effectiveRpsResult?.error) setEffectiveRps('Error');
+      else if (effectiveRpsResult) setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-');
+
+      const burstRpsResult = await getBurstRps(formData);
+      if (isCancelledRef.current) return;
+      if (burstRpsResult?.error) setBurstRps('Error');
+      else if (burstRpsResult) setBurstRps(burstRpsResult.burstRps ?? '-');
+
+      setIsBenchmarking(false);
+
+      if (!isCancelledRef.current) {
+          toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
+      }
   };
 
   useEffect(() => {
@@ -277,10 +281,24 @@ export default function Home() {
                   )}
                 </div>
               )}
-               <Button onClick={handleStartBenchmark} disabled={isProcessing || !detectedChainId || detectedChainId === 'unknown'} className="w-full h-12 text-base bg-accent text-accent-foreground hover:bg-accent/90">
-                  {isBenchmarking ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Zap className="mr-2 h-4 w-4" />}
-                  Start Benchmark
-                </Button>
+               <Button 
+                onClick={isBenchmarking ? handleStopBenchmark : handleStartBenchmark}
+                disabled={isDetecting || (!isBenchmarking && (!detectedChainId || detectedChainId === 'unknown'))}
+                className="w-full h-12 text-base"
+                variant={isBenchmarking ? "destructive" : "default"}
+                >
+                {isBenchmarking ? (
+                    <>
+                        <Square className="mr-2 h-4 w-4" />
+                        Stop Benchmark
+                    </>
+                ) : (
+                    <>
+                        <Zap className="mr-2 h-4 w-4" />
+                        Start Benchmark
+                    </>
+                )}
+               </Button>
             </div>
           </CardContent>
         </Card>
