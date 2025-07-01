@@ -4,6 +4,7 @@ const CHAIN_KEYWORDS: Record<string, string[]> = {
     aptos: ["apt", "aptos"],
     sui: ["sui"],
     solana: ["sol", "solana"],
+    injective: ["inj", "injective"],
     cosmos: ["cosmos", "atom", "gaia", "osmosis", "osmo", "juno", "terra", "luna", "secret", "scrt"],
     dydx: ["dydx"],
     substrate: ["polkadot", "kusama", "moonbeam", "substrate"],
@@ -15,6 +16,7 @@ export const CHAIN_NAMES: Record<string, string> = {
     aptos: "Aptos",
     sui: "Sui",
     solana: "Solana",
+    injective: "Injective",
     cosmos: "Cosmos",
     dydx: "dYdX",
     substrate: "Substrate",
@@ -25,6 +27,8 @@ export const CHAIN_NAMES: Record<string, string> = {
 export function detectChain(rpcUrl: string): string {
     const lowered = rpcUrl.toLowerCase();
     
+    // Prioritize specific chains that might also match general keywords
+    if (lowered.includes("injective") || lowered.includes("inj")) return 'injective';
     if (lowered.includes("beacon")) return 'beacon';
     if (lowered.includes("dydx")) return 'dydx';
     
@@ -118,6 +122,7 @@ async function checkBeacon(rpc: string): Promise<number> {
 export const CHAIN_CHECK_FUNCTIONS: Record<string, (rpc: string) => Promise<number>> = {
     evm: checkEvm,
     solana: checkSolana,
+    injective: checkCosmos,
     cosmos: checkCosmos,
     aptos: checkAptos,
     sui: checkSui,

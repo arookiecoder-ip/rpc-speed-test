@@ -81,3 +81,14 @@ export const SuiIcon = (props: SVGProps<SVGSVGElement>) => (
     <path d="M8 7.5C8 5.01472 10.0147 3 12.5 3C14.9853 3 17 5.01472 17 7.5C17 9.98528 14.9853 12 12.5 12H8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
 );
+
+export const InjectiveIcon = (props: SVGProps<SVGSVGElement>) => (
+  <svg
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path d="M17.433 11.233V12.7H13.59v4.201h-3.18V12.7H6.568v-1.467h3.843V7.032h3.18v4.201h3.842zM12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 21.6c-5.302 0-9.6-4.298-9.6-9.6s4.298-9.6 9.6-9.6 9.6 4.298 9.6 9.6-4.298 9.6-9.6 9.6z"/>
+  </svg>
+);

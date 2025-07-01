@@ -1,4 +1,4 @@
-import { EvmIcon, SolanaIcon, CosmosIcon, AptosIcon, SuiIcon } from '@/components/icons';
+import { EvmIcon, SolanaIcon, CosmosIcon, AptosIcon, SuiIcon, InjectiveIcon } from '@/components/icons';
 import { HelpCircle, Layers, TowerControl, Repeat } from 'lucide-react';
 import type { SVGProps } from 'react';
 
@@ -18,6 +18,8 @@ export const ChainIcon = ({ chain, ...props }: ChainIconProps) => {
       return <AptosIcon {...props} />;
     case 'sui':
       return <SuiIcon {...props} />;
+    case 'injective':
+      return <InjectiveIcon {...props} />;
     case 'dydx':
       return <Repeat {...props} />;
     case 'substrate':
