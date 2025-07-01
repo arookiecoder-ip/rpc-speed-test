@@ -161,8 +161,8 @@ export default function Home() {
       formData.append('rpcUrl', rpcUrl);
       formData.append('chainId', detectedChainId);
 
+      // Sequentially run benchmarks
       const initialBlockResult = await getLatestBlock(formData);
-
       if (isCancelledRef.current) return;
 
       if (initialBlockResult?.error) {
@@ -171,26 +171,26 @@ export default function Home() {
           setIsBenchmarking(false);
           return;
       }
-      
       setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
       setIsPollingBlock(true);
 
       const cupsResult = await getCUPS(formData);
-      if (isCancelledRef.current) return;
+      if (isCancelledRef.current) { stopPolling(); return; }
       if (cupsResult?.error) setCups('Error');
       else if (cupsResult) setCups(cupsResult.cups ?? '-');
       
       const effectiveRpsResult = await getEffectiveRps(formData);
-      if (isCancelledRef.current) return;
+      if (isCancelledRef.current) { stopPolling(); return; }
       if (effectiveRpsResult?.error) setEffectiveRps('Error');
       else if (effectiveRpsResult) setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-');
 
       const burstRpsResult = await getBurstRps(formData);
-      if (isCancelledRef.current) return;
+      if (isCancelledRef.current) { stopPolling(); return; }
       if (burstRpsResult?.error) setBurstRps('Error');
       else if (burstRpsResult) setBurstRps(burstRpsResult.burstRps ?? '-');
 
       setIsBenchmarking(false);
+      stopPolling(); // Stop polling after all benchmarks are done
 
       if (!isCancelledRef.current) {
           toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
@@ -263,7 +263,7 @@ export default function Home() {
                   disabled={isProcessing}
                 />
                 <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <Button onClick={handleDetectChain} disabled={!rpcUrl || isProcessing} className="w-full sm:w-auto h-12 text-base bg-primary text-primary-foreground hover:bg-primary/90">
+                  <Button onClick={handleDetectChain} disabled={!rpcUrl || isProcessing} className="w-full sm:w-auto h-12 text-base">
                     {isDetecting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Settings2 className="mr-2 h-4 w-4" />}
                     Detect Chain
                   </Button>
