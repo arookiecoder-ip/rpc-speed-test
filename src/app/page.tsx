@@ -147,21 +147,21 @@ export default function Home() {
       formData.append('rpcUrl', rpcUrl);
       formData.append('chainId', detectedChainId);
 
-      // --- Block Number Logic ---
-      // Fetch initial block and start polling immediately on success.
-      // This is not awaited, so other benchmarks can start.
-      getLatestBlock(formData).then(result => {
-        if (result?.error) {
-            setLatestBlock('Error');
-            toast({ title: "Connection Failed", description: result.error, variant: "destructive" });
-        } else if (result) {
-            setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
-            setIsPollingBlock(true); // Start real-time updates!
-        }
-      });
+      // Await the first block check to ensure the endpoint is reachable
+      const initialBlockResult = await getLatestBlock(formData);
+
+      if (initialBlockResult?.error) {
+          setLatestBlock('Error');
+          toast({ title: "Connection Failed", description: initialBlockResult.error, variant: "destructive" });
+          setIsBenchmarking(false); // Stop if we can't even connect
+          return;
+      }
       
-      // --- Other Benchmark Logic ---
-      // These run in parallel and update their own state.
+      // Connection is good. Set initial block and start polling immediately.
+      setLatestBlock(initialBlockResult.latestBlock?.toLocaleString() ?? '-');
+      setIsPollingBlock(true); // This starts the real-time updates.
+
+      // Run less disruptive benchmarks first while polling is active.
       const cupsPromise = getCUPS(formData).then(result => {
         if (result?.error) {
             setCups('Error');
@@ -177,7 +177,11 @@ export default function Home() {
             setEffectiveRps(result.effectiveRps ?? '-');
         }
       });
+      
+      // Wait for CUPS and sequential RPS to finish. Block polling should be smooth during this.
+      await Promise.allSettled([cupsPromise, effectiveRpsPromise]);
 
+      // Now run the connection-heavy burst test. Block polling might lag here.
       const burstRpsPromise = getBurstRps(formData).then(result => {
         if (result?.error) {
             setBurstRps('Error');
@@ -185,11 +189,9 @@ export default function Home() {
             setBurstRps(result.burstRps ?? '-');
         }
       });
-
-      // --- Finalization Logic ---
-      // Wait for the long-running benchmarks to complete, then turn off spinners and show toast.
-      await Promise.allSettled([cupsPromise, effectiveRpsPromise, burstRpsPromise]);
+      await burstRpsPromise;
       
+      // All benchmarks are complete.
       setIsBenchmarking(false);
       toast({ title: "Benchmark Complete", description: "All available metrics gathered." });
   };
