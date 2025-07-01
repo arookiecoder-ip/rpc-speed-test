@@ -13,6 +13,7 @@ import {
   History,
   Trash2,
   MessageSquare,
+  X,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,7 @@ import { ThemeToggle } from '@/components/theme-toggle';
 import { ChainSelector } from '@/components/chain-selector';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { sendFailureReport } from './failureReportActions';
 
 type BenchmarkResult = {
   id: number;
@@ -159,11 +161,21 @@ export default function Home() {
     }
   };
 
-  const handleRpcUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setRpcUrl(e.target.value);
-    setSelectedChainId('auto');
+  const updateRpcUrl = (newUrl: string) => {
+    setRpcUrl(newUrl);
+    if (selectedChainId !== 'auto') {
+        setSelectedChainId('auto');
+    }
     setDetectedChainId(null);
     setDetectedChainName(null);
+  }
+
+  const handleRpcUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateRpcUrl(e.target.value);
+  };
+  
+  const handleClearInput = () => {
+    updateRpcUrl('');
   };
 
   const stopPolling = () => {
@@ -238,6 +250,14 @@ export default function Home() {
       let tempEffectiveRps: string | number = '-';
       let tempBurstRps: string | number = '-';
       
+      const handleFailure = async (context: string, message: string) => {
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: context,
+            errorMessage: message,
+        });
+      };
+
       if (benchmarkParams.latestBlock) {
         const initialBlockResult = await getLatestBlock(formData);
         if (isCancelledRef.current) { setIsBenchmarking(false); return; }
@@ -245,6 +265,7 @@ export default function Home() {
         if (initialBlockResult?.error) {
             setLatestBlock('Error');
             toast({ title: "Connection Failed", description: initialBlockResult.error, variant: "destructive" });
+            await handleFailure('Get Latest Block', initialBlockResult.error);
             setIsBenchmarking(false);
             return;
         }
@@ -257,22 +278,40 @@ export default function Home() {
       if (benchmarkParams.cups) {
         const cupsResult = await getCUPS(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (cupsResult?.error) { setCups('Error'); tempCups = 'Error'; }
-        else if (cupsResult) { setCups(cupsResult.cups ?? '-'); tempCups = cupsResult.cups ?? '-'; }
+        if (cupsResult?.error) { 
+            setCups('Error'); 
+            tempCups = 'Error'; 
+            await handleFailure('Get CUPS', cupsResult.error);
+        } else if (cupsResult) { 
+            setCups(cupsResult.cups ?? '-'); 
+            tempCups = cupsResult.cups ?? '-'; 
+        }
       }
       
       if (benchmarkParams.effectiveRps) {
         const effectiveRpsResult = await getEffectiveRps(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (effectiveRpsResult?.error) { setEffectiveRps('Error'); tempEffectiveRps = 'Error'; }
-        else if (effectiveRpsResult) { setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-'); tempEffectiveRps = effectiveRpsResult.effectiveRps ?? '-'; }
+        if (effectiveRpsResult?.error) { 
+            setEffectiveRps('Error'); 
+            tempEffectiveRps = 'Error'; 
+            await handleFailure('Get Effective RPS', effectiveRpsResult.error);
+        } else if (effectiveRpsResult) { 
+            setEffectiveRps(effectiveRpsResult.effectiveRps ?? '-'); 
+            tempEffectiveRps = effectiveRpsResult.effectiveRps ?? '-'; 
+        }
       }
 
       if (benchmarkParams.burstRps) {
         const burstRpsResult = await getBurstRps(formData);
         if (isCancelledRef.current) { stopPolling(); setIsBenchmarking(false); return; }
-        if (burstRpsResult?.error) { setBurstRps('Error'); tempBurstRps = 'Error'; }
-        else if (burstRpsResult) { setBurstRps(burstRpsResult.burstRps ?? '-'); tempBurstRps = burstRpsResult.burstRps ?? '-'; }
+        if (burstRpsResult?.error) { 
+            setBurstRps('Error'); 
+            tempBurstRps = 'Error'; 
+            await handleFailure('Get Burst RPS', burstRpsResult.error);
+        } else if (burstRpsResult) { 
+            setBurstRps(burstRpsResult.burstRps ?? '-'); 
+            tempBurstRps = burstRpsResult.burstRps ?? '-'; 
+        }
       }
       
       setIsBenchmarking(false);
@@ -317,6 +356,11 @@ export default function Home() {
       if (result?.error) {
         setLatestBlock('Error');
         toast({ title: "Connection Lost", description: "Stopping real-time block updates.", variant: "destructive" });
+        await sendFailureReport({
+            rpcUrl,
+            errorContext: 'Live Block Update',
+            errorMessage: result.error,
+        });
         stopPolling();
       } else if (result) {
         setLatestBlock(result.latestBlock?.toLocaleString() ?? '-');
@@ -361,20 +405,22 @@ export default function Home() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground font-body">
-      <header className="absolute top-0 left-0 right-0 p-4 flex justify-end">
-        <ThemeToggle />
-      </header>
-
-      <main className="flex-1 container mx-auto px-4 py-8 flex flex-col items-center justify-center text-center gap-12">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-6xl font-bold font-headline" style={{ color: 'hsl(var(--primary))' }}>
-            ChainDoctor
-          </h1>
-          <p className="text-muted-foreground text-lg max-w-md">
-            Benchmark your blockchain RPC endpoint for speed and reliability.
-          </p>
+      <header className="container mx-auto px-4 pt-8">
+        <div className="relative flex items-center justify-center">
+            <div className="flex flex-col gap-2 text-center">
+              <h1 className="text-5xl sm:text-6xl font-bold font-headline" style={{ color: 'hsl(var(--primary))' }}>
+                ChainDoctor
+              </h1>
+              <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                Benchmark your blockchain RPC endpoint for speed and reliability.
+              </p>
+            </div>
+            <div className="absolute top-0 right-0">
+              <ThemeToggle />
+            </div>
         </div>
-
+      </header>
+      <main className="flex-1 container mx-auto px-4 py-8 flex flex-col items-center text-center gap-12">
         <Card className="w-full max-w-3xl p-6 sm:p-8 bg-transparent border-border/60">
           <CardHeader className="text-center p-0 mb-6">
             <CardTitle className="font-headline text-2xl">Configuration</CardTitle>
@@ -383,15 +429,29 @@ export default function Home() {
           <CardContent className="p-0">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col sm:flex-row items-center gap-4">
-                <Input
-                  type="text"
-                  placeholder="https://your-rpc-endpoint.com"
-                  className="bg-input border-border/80 flex-grow text-base h-12"
-                  value={rpcUrl}
-                  onChange={handleRpcUrlChange}
-                  disabled={isBenchmarking}
-                  suppressHydrationWarning
-                />
+                <div className="relative w-full flex-grow">
+                    <Input
+                      type="text"
+                      placeholder="https://your-rpc-endpoint.com"
+                      className="bg-input border-border/80 w-full text-base h-12 pr-10"
+                      value={rpcUrl}
+                      onChange={handleRpcUrlChange}
+                      disabled={isBenchmarking}
+                      suppressHydrationWarning
+                    />
+                    {rpcUrl && !isBenchmarking && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground hover:text-foreground rounded-full"
+                            onClick={handleClearInput}
+                            aria-label="Clear input"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
                 <ChainSelector 
                   value={selectedChainId}
                   onChange={setSelectedChainId}
@@ -486,7 +546,7 @@ export default function Home() {
                 <TableBody>
                   {history.map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium max-w-xs truncate">{item.rpcUrl}</TableCell>
+                      <TableCell className="font-medium max-w-xs truncate select-text">{item.rpcUrl}</TableCell>
                       <TableCell>{item.chainName}</TableCell>
                       <TableCell className="text-right">{item.cups}</TableCell>
                       <TableCell className="text-right">{item.effectiveRps}</TableCell>
@@ -522,7 +582,7 @@ export default function Home() {
                     <div className="grid gap-4 py-4">
                         <Textarea 
                             id="feedback"
-                            placeholder="Your feedback..."
+                            placeholder="Enter feedback (minimum 10 characters)"
                             value={feedbackText}
                             onChange={(e) => setFeedbackText(e.target.value)}
                             className="col-span-3"
