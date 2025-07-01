@@ -44,7 +44,7 @@ import { CHAIN_NAMES } from '@/lib/rpc';
 import { ChainIcon } from '@/components/chain-icon';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { ChainSelector } from '@/components/chain-selector';
-import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 
 type BenchmarkResult = {
@@ -372,22 +372,22 @@ export default function Home() {
                   ) : null}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left pt-2 pb-4">
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="latestBlock" checked={benchmarkParams.latestBlock} onCheckedChange={(checked) => handleParamChange('latestBlock', checked)} />
-                        <Label htmlFor="latestBlock" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Live Block Number</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4 text-left pt-2 pb-4">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="latestBlock" className="text-sm font-medium">Live Block Number</Label>
+                        <Switch id="latestBlock" checked={benchmarkParams.latestBlock} onCheckedChange={(checked) => handleParamChange('latestBlock', checked as boolean)} />
                     </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="cups" checked={benchmarkParams.cups} onCheckedChange={(checked) => handleParamChange('cups', checked)} />
-                        <Label htmlFor="cups" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Chain Usage Per Second (CUPS)</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="cups" className="text-sm font-medium">Chain Usage Per Second (CUPS)</Label>
+                        <Switch id="cups" checked={benchmarkParams.cups} onCheckedChange={(checked) => handleParamChange('cups', checked as boolean)} />
                     </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="effectiveRps" checked={benchmarkParams.effectiveRps} onCheckedChange={(checked) => handleParamChange('effectiveRps', checked)} />
-                        <Label htmlFor="effectiveRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Effective RPS (Sequential)</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="effectiveRps" className="text-sm font-medium">Effective RPS (Sequential)</Label>
+                        <Switch id="effectiveRps" checked={benchmarkParams.effectiveRps} onCheckedChange={(checked) => handleParamChange('effectiveRps', checked as boolean)} />
                     </div>
-                    <div className="flex items-center space-x-3">
-                        <Checkbox id="burstRps" checked={benchmarkParams.burstRps} onCheckedChange={(checked) => handleParamChange('burstRps', checked)} />
-                        <Label htmlFor="burstRps" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">Burst RPS (Parallel)</Label>
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="burstRps" className="text-sm font-medium">Burst RPS (Parallel)</Label>
+                        <Switch id="burstRps" checked={benchmarkParams.burstRps} onCheckedChange={(checked) => handleParamChange('burstRps', checked as boolean)} />
                     </div>
                 </div>
                 
